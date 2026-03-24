@@ -19,7 +19,7 @@ function formatYear(year: number): string {
 }
 
 const YEAR_MARKERS = generateYearMarkers();
-const ITEM_HEIGHT = 36;
+const ITEM_HEIGHT = 44;
 
 interface TimelineNavProps {
   activeYear?: number;
@@ -52,6 +52,7 @@ export function TimelineNav({
   const lastDragTime = useRef(0);
   const velocity = useRef(0);
   const momentumFrame = useRef(0);
+  const dragMoved = useRef(false);
 
   const maxOffset = (YEAR_MARKERS.length - 1) * ITEM_HEIGHT;
 
@@ -122,6 +123,7 @@ export function TimelineNav({
   /* ── Pointer handlers ── */
   const onPointerDown = useCallback((e: React.PointerEvent) => {
     isDragging.current = true;
+    dragMoved.current = false;
     dragStartY.current = e.clientY;
     dragStartOffset.current = offsetRef.current;
     lastDragY.current = e.clientY;
@@ -135,6 +137,7 @@ export function TimelineNav({
     (e: React.PointerEvent) => {
       if (!isDragging.current) return;
       const dy = dragStartY.current - e.clientY;
+      if (Math.abs(dy) > 3) dragMoved.current = true;
       const newOffset = clamp(dragStartOffset.current + dy);
       offsetRef.current = newOffset;
       setScrollOffset(newOffset);
@@ -155,6 +158,25 @@ export function TimelineNav({
       if (!isDragging.current) return;
       isDragging.current = false;
       (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId);
+
+      if (!dragMoved.current) {
+        // Click, not drag — reverse the barrel projection to find the clicked year
+        const container = containerRef.current;
+        if (container) {
+          const rect = container.getBoundingClientRect();
+          const centerY = rect.top + rect.height / 2;
+          // Positive = clicked below center, negative = above
+          const clickFromCenter = e.clientY - centerY;
+          // Reverse: translateY = sin(radians) * radius → radians = asin(clickFromCenter / radius)
+          const r = radius || 1;
+          const clamped = Math.max(-1, Math.min(1, clickFromCenter / r));
+          const radians = Math.asin(clamped);
+          const angleDeg = (radians * 180) / Math.PI;
+          const itemOffset = (angleDeg / anglePerItem) * ITEM_HEIGHT;
+          animateTo(offsetRef.current + itemOffset);
+        }
+        return;
+      }
 
       const v = velocity.current;
       if (Math.abs(v) > 0.3) {
@@ -187,13 +209,6 @@ export function TimelineNav({
     [snapTo, maxOffset],
   );
 
-  /** Click a specific year */
-  const handleClick = (year: number) => {
-    if (isDragging.current) return;
-    const idx = YEAR_MARKERS.indexOf(year);
-    if (idx >= 0) animateTo(idx * ITEM_HEIGHT);
-  };
-
   return (
     <aside className="fixed left-0 top-0 h-full w-56 bg-surface-container-low hidden md:flex flex-col z-40">
       {/* Vertical timeline line with gradient fade at both ends */}
@@ -217,8 +232,11 @@ export function TimelineNav({
         onPointerUp={onPointerUp}
         onPointerCancel={onPointerUp}
         onWheel={onWheel}
-        className="relative flex-1 select-none touch-none cursor-grab active:cursor-grabbing overflow-hidden"
-        style={{ perspective: "1000px" }}
+        className="relative flex-1 select-none touch-none overflow-hidden"
+        style={{
+          perspective: "1000px",
+          cursor: isDragging.current ? "grabbing" : "",
+        }}
       >
         {/* Top / bottom fade masks */}
         <div className="pointer-events-none absolute inset-x-0 top-0 h-1/3 bg-gradient-to-b from-surface-container-low via-surface-container-low/80 to-transparent z-20" />
@@ -246,8 +264,7 @@ export function TimelineNav({
             return (
               <div
                 key={year}
-                onClick={() => handleClick(year)}
-                className="absolute flex items-center cursor-pointer"
+                className="absolute flex items-center"
                 style={{
                   height: ITEM_HEIGHT,
                   width: "100%",
