@@ -10,12 +10,8 @@ const pendingStates = new Map<
   { verifier?: string; provider: string }
 >();
 
-export async function handleAuthRoutes(
-  req: Request,
-  path: string,
-): Promise<Response | null> {
-  // --- Google OAuth ---
-  if (path === "/api/auth/google") {
+export const authRoutes = {
+  "/api/auth/google": async () => {
     const state = generateState();
     const codeVerifier = generateCodeVerifier();
     const url = await googleAuth.createAuthorizationURL(state, codeVerifier, [
@@ -25,9 +21,9 @@ export async function handleAuthRoutes(
     ]);
     pendingStates.set(state, { verifier: codeVerifier, provider: "google" });
     return Response.redirect(url.toString(), 302);
-  }
+  },
 
-  if (path === "/api/auth/google/callback") {
+  "/api/auth/google/callback": async (req: Request) => {
     const url = new URL(req.url);
     const code = url.searchParams.get("code");
     const state = url.searchParams.get("state");
@@ -71,13 +67,13 @@ export async function handleAuthRoutes(
     );
 
     const token = await createToken(user);
-    const headers = new Headers({ Location: "/" });
+    const clientUrl = process.env.CLIENT_URL || "/";
+    const headers = new Headers({ Location: clientUrl });
     setAuthCookie(headers, token);
     return new Response(null, { status: 302, headers });
-  }
+  },
 
-  // --- Session ---
-  if (path === "/api/auth/me") {
+  "/api/auth/me": async (req: Request) => {
     const user = await getAuthUser(req);
     if (!user) return Response.json({ user: null }, { status: 401 });
     return Response.json({
@@ -88,13 +84,11 @@ export async function handleAuthRoutes(
         avatar: user.avatar,
       },
     });
-  }
+  },
 
-  if (path === "/api/auth/logout") {
+  "/api/auth/logout": () => {
     const headers = new Headers();
     clearAuthCookie(headers);
     return Response.json({ ok: true }, { headers });
-  }
-
-  return null;
-}
+  },
+} as const;

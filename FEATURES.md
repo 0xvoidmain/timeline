@@ -6,6 +6,13 @@ Tracking all features for the Timeline world event app. Updated after each featu
 
 ## Implemented
 
+### Bun Native Routing
+
+- **Description**: Server refactored from manual path matching in a fetch handler to Bun's built-in `routes` property in `Bun.serve()`, with route files exporting route objects and `BunRequest` for type-safe params
+- **Status**: Implemented
+- **Key Files**: `server/index.ts`, `server/routes/events.ts`, `server/routes/auth.ts`
+- **Date**: 2026-03-24
+
 ### OAuth Authentication
 
 - **Description**: Users can sign in via Google OAuth, session managed with JWT in httpOnly cookies

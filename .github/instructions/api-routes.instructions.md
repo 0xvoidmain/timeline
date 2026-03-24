@@ -7,9 +7,30 @@ applyTo: "server/routes/**/*.ts"
 
 ## Structure
 
-- Each route file exports a handler function: `handleXxxRoutes(req, path)`
-- Handler returns `Response | null` — return `null` for unmatched routes
-- Routes are registered in `server/index.ts`
+- Each route file exports a `routes` object mapping URL patterns to handlers
+- Use Bun's built-in `routes` property in `Bun.serve()` — no manual path matching
+- Routes are spread into the `routes` object in `server/index.ts`
+- Use per-HTTP method handlers: `{ GET: ..., POST: ... }` for routes with multiple methods
+- Use `req.params` (from `BunRequest`) for route parameters like `:id`
+
+```ts
+// Example route file export:
+export const fooRoutes = {
+  "/api/foo": {
+    GET: async (req: Request) => {
+      /* ... */
+    },
+    POST: requireAuth(async (req, userId) => {
+      /* ... */
+    }),
+  },
+  "/api/foo/:id": {
+    GET: async (req: BunRequest<"/api/foo/:id">) => {
+      /* ... */
+    },
+  },
+} as const;
+```
 
 ## Validation
 
