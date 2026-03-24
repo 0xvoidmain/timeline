@@ -251,7 +251,7 @@ export function TimelineNav({
                 style={{
                   height: ITEM_HEIGHT,
                   width: "100%",
-                  paddingLeft: "2.5rem",
+                  paddingLeft: "3.5rem",
                   transform: `translateY(${translateY}px) translateZ(${translateZ}px) rotateX(${-angle}deg)`,
                   opacity: Math.max(opacity * (0.7 + proximity * 0.7), 0),
                   backfaceVisibility: "hidden",
@@ -263,9 +263,9 @@ export function TimelineNav({
                     fontSize: `${0.875 + proximity * 0.5}rem`,
                     fontWeight: proximity > 0.5 ? 700 : 400,
                     color:
-                      proximity > 0.3
-                        ? `color-mix(in srgb, var(--color-primary) ${Math.round(proximity * 100)}%, var(--color-on-surface-variant))`
-                        : "var(--color-on-surface-variant)",
+                      proximity > 0.9
+                        ? `color-mix(in srgb, var(--color-primary) ${Math.round(proximity * 100)}%, var(--color-outline))`
+                        : "var(--color-outline)",
                     textShadow:
                       proximity > 0.5
                         ? `0 0 ${Math.round(proximity * 12)}px rgba(233,193,118,${(proximity * 0.4).toFixed(2)})`
