@@ -151,3 +151,11 @@ body {
   scrollbar-width: thin;
   scrollbar-color: var(--color-primary) transparent;
 }
+
+/* Hidden scrollbar — still scrollable */
+.scrollbar-hidden::-webkit-scrollbar {
+  display: none;
+}
+.scrollbar-hidden {
+  scrollbar-width: none;
+}

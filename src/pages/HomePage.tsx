@@ -75,7 +75,7 @@ export function HomePage() {
   const closeEvent = () => setSearchParams({});
 
   return (
-    <main className="ml-0 md:ml-64 pt-24 pb-12 px-8">
+    <main className="ml-0 md:ml-56 pt-24 pb-12 px-8">
       <div className="max-w-7xl mx-auto">
         {/* Page header — Serif title + uppercase Inter label */}
         <header className="mb-12 flex items-baseline gap-4">

@@ -96,7 +96,7 @@ Tracking all features for the Timeline world event app. Updated after each featu
 
 - **Description**: Fully redesigned homepage with Nostalgic-Digital aesthetic featuring a masonry-like 3-column event card grid, glassmorphism cards, dummy data for visual preview, and responsive layout that collapses to single column on mobile
 - **Status**: Implemented
-- **Key Files**: `src/pages/HomePage.tsx`, `src/components/EventCard.tsx`, `src/components/EventCardWide.tsx`, `src/components/Navbar.tsx`, `src/components/Sidebar.tsx`, `src/App.tsx`
+- **Key Files**: `src/pages/HomePage.tsx`, `src/components/EventCard.tsx`, `src/components/EventCardWide.tsx`, `src/components/Navbar.tsx`, `src/components/TimelineNav.tsx`, `src/App.tsx`
 - **Date**: 2026-03-25
 
 ### Search Input
@@ -113,19 +113,13 @@ Tracking all features for the Timeline world event app. Updated after each featu
 - **Key Files**: `shared/types.ts`, `shared/schemas.ts`, `shared/constants.ts`, `src/types/index.ts`
 - **Date**: 2026-03-24
 
-### Sidebar
-
-- **Description**: Fixed left sidebar with vertical timeline navigation, zoom slider, and settings/help links; hides on mobile for responsive layout
-- **Status**: Implemented
-- **Key Files**: `src/components/Sidebar.tsx`, `src/components/TimelineNav.tsx`, `src/App.tsx`
-- **Date**: 2026-03-25
-
 ### Timeline Navigation
 
-- **Description**: Vertical timeline year navigation with gold connector line and active-state glow effect
+- **Description**: Full fixed left sidebar with scrollable vertical timeline spanning 3000 BCE to 2026; generates year markers at varying density, gold connector line, active-state glow, and auto-scrolls active year into view on mount
 - **Status**: Implemented
-- **Key Files**: `src/components/TimelineNav.tsx`
+- **Key Files**: `src/components/TimelineNav.tsx`, `src/App.tsx`, `src/pages/HomePage.tsx`
 - **Date**: 2026-03-25
+- **Note**: Merged Sidebar shell into TimelineNav (2026-03-25); removed zoom slider, settings/help footer, and era header
 
 ### Verification Badge
 
@@ -176,4 +170,10 @@ _No features currently in progress._
 
 ## Removed
 
-_No features removed._
+### Sidebar
+
+- **Description**: Fixed left sidebar with vertical timeline navigation, zoom slider, and settings/help links; hides on mobile for responsive layout
+- **Status**: Removed
+- **Key Files**: `src/components/Sidebar.tsx`
+- **Date**: 2026-03-25
+- **Note**: Shell merged into TimelineNav; zoom slider, settings/help footer, and era header removed

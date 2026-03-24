@@ -1,7 +1,7 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "./context/AuthContext";
 import { Navbar } from "./components/Navbar";
-import { Sidebar } from "./components/Sidebar";
+import { TimelineNav } from "./components/TimelineNav";
 import { HomePage } from "./pages/HomePage";
 
 function App() {
@@ -9,7 +9,7 @@ function App() {
     <AuthProvider>
       <BrowserRouter>
         <Navbar />
-        <Sidebar />
+        <TimelineNav />
         <Routes>
           <Route path="/" element={<HomePage />} />
         </Routes>
