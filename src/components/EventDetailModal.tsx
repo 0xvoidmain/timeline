@@ -61,11 +61,11 @@ export function EventDetailModal({ eventId, onClose }: EventDetailModalProps) {
       />
 
       {/* Content container */}
-      <div className="relative max-w-6xl w-full max-h-[90vh] overflow-y-auto mt-[5vh] mx-4 bg-surface-container-low rounded-2xl border border-outline-variant/10">
+      <div className="relative max-w-6xl w-full max-h-[90vh] overflow-y-auto scrollbar-line mt-[5vh] mx-4 bg-surface-container-low rounded-2xl border border-outline-variant/10">
         {/* Close button */}
         <button
           onClick={onClose}
-          className="absolute top-4 right-4 z-10 text-on-surface-variant hover:text-on-surface transition-colors"
+          className="sticky top-4 float-right mr-4 mt-4 z-10 text-on-surface-variant hover:text-on-surface transition-colors"
         >
           <span className="material-symbols-outlined text-2xl">close</span>
         </button>
