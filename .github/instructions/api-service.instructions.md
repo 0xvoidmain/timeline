@@ -41,5 +41,6 @@ export const api = {
 ## Rules
 
 - Never use `fetch()` directly in components — always go through this service
-- Keep response types in `src/types/index.ts`
+- Import types from `src/types/` (which re-exports from `shared/types.ts`)
+- Use `CreateEventInput` / `UpdateEventInput` from shared types for request bodies — not `Omit<>` or `Partial<>` of response types
 - URL construction: use template literals with `encodeURIComponent` for IDs

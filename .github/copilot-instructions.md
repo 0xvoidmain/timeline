@@ -18,12 +18,16 @@ bun test               # run all tests (bun test runner)
 ## Architecture
 
 ```
+shared/                 # Single source of truth for types, schemas, constants
+  ├── constants.ts      #   Enums & constants (VISIBILITY, AUTH_PROVIDERS)
+  ├── schemas.ts        #   Zod validation schemas (used by both FE & BE)
+  └── types.ts          #   TypeScript types (inferred from Zod where possible)
 src/                    # React frontend (Vite)
   ├── components/       #   Reusable UI components
   ├── pages/            #   Route-level page components
   ├── services/         #   API client layer (all backend calls)
   ├── hooks/            #   Custom React hooks
-  ├── types/            #   Shared TypeScript interfaces
+  ├── types/            #   Re-exports from shared/ (keep imports short)
   ├── context/          #   React context providers (auth, etc.)
   └── lib/              #   Utility functions
 server/                 # Bun backend
@@ -53,7 +57,8 @@ server/                 # Bun backend
 - **Environment variables**: Use `.env` files; never hard-code secrets. Reference `.env.example` for required vars
 - **Dates**: Store all dates as UTC in MongoDB. Format at render time only
 - **Auth**: OAuth (Google) → JWT in httpOnly cookie — no localStorage tokens
-- **Validation**: Use Zod schemas at API boundaries (server/routes)
+- **Shared types**: Define types, Zod schemas, and constants in `shared/` — never duplicate between frontend and backend. `src/types/` re-exports from `shared/`
+- **Validation**: Use Zod schemas from `shared/schemas.ts` at API boundaries
 - **API design**: RESTful JSON APIs under `/api/*`, always return `{ error: string }` on failure
 - **Feature tracking**: After implementing or modifying a feature, update `FEATURES.md` at the project root
 

@@ -15,7 +15,7 @@ applyTo: "server/models/**/*.ts"
 
 - `required: true` for mandatory fields
 - Always set `default` values where sensible
-- Use `enum` for constrained string fields (e.g., visibility, provider)
+- For enum fields, import constants from `shared/constants.ts` (e.g., `VISIBILITY`, `AUTH_PROVIDERS`) — never hardcode enum arrays
 - Use `{ timestamps: true }` option for auto `createdAt`/`updatedAt`
 
 ## Indexes

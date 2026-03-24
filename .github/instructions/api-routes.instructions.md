@@ -34,7 +34,7 @@ export const fooRoutes = {
 
 ## Validation
 
-- Always validate request bodies with Zod schemas defined at the top of the file
+- Import Zod schemas from `shared/schemas.ts` — do not redefine them in route files
 - Use `.safeParse()` and return 400 with `error.issues` on failure
 - Validate URL params (e.g., ObjectId format) before database queries
 
@@ -56,13 +56,11 @@ export const fooRoutes = {
 ## Patterns
 
 ```ts
-// Always use this pattern for CRUD routes:
-const schema = z.object({
-  /* ... */
-});
+// Import schemas from shared — never define inline:
+import { createFooSchema } from "../../shared/schemas.ts";
 
 // Parse → validate → act → respond
-const parsed = schema.safeParse(body);
+const parsed = createFooSchema.safeParse(body);
 if (!parsed.success) {
   return Response.json(
     { error: "Validation failed", details: parsed.error.issues },
