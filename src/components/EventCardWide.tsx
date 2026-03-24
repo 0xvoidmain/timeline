@@ -6,12 +6,18 @@ import type { EventCardData } from "./EventCard";
 interface EventCardWideProps {
   event: EventCardData;
   className?: string;
+  onClick?: () => void;
 }
 
-export function EventCardWide({ event, className = "" }: EventCardWideProps) {
+export function EventCardWide({
+  event,
+  className = "",
+  onClick,
+}: EventCardWideProps) {
   return (
     <div
-      className={`glass-card rounded-xl overflow-hidden flex flex-col md:flex-row group border border-outline-variant/10 ${className}`}
+      className={`glass-card rounded-xl overflow-hidden flex flex-col md:flex-row group border border-outline-variant/10 ${onClick ? "cursor-pointer" : ""} ${className}`}
+      onClick={onClick}
     >
       {/* Image half */}
       <div className="relative md:w-1/2 aspect-video md:aspect-auto overflow-hidden">

@@ -1,8 +1,10 @@
 /* HomePage — Main archive page with masonry event grid and floating action button */
 
+import { useSearchParams } from "react-router-dom";
 import { EventCard } from "../components/EventCard";
 import { EventCardWide } from "../components/EventCardWide";
 import { FloatingActionButton } from "../components/FloatingActionButton";
+import { EventDetailModal } from "../components/EventDetailModal";
 import type { EventCardData } from "../components/EventCard";
 
 /* ── Dummy data matching the design mockup ── */
@@ -66,6 +68,12 @@ const FEATURED_EVENT: EventCardData = {
 };
 
 export function HomePage() {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const activeEventId = searchParams.get("event");
+
+  const openEvent = (id: string) => setSearchParams({ event: id });
+  const closeEvent = () => setSearchParams({});
+
   return (
     <main className="ml-0 md:ml-64 pt-24 pb-12 px-8">
       <div className="max-w-7xl mx-auto">
@@ -82,20 +90,39 @@ export function HomePage() {
         {/* Masonry-like grid — asymmetric card placement */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 items-start">
           {/* Card 1: standard vertical */}
-          <EventCard event={DUMMY_EVENTS[0]} />
+          <EventCard
+            event={DUMMY_EVENTS[0]}
+            onClick={() => openEvent(DUMMY_EVENTS[0].id)}
+          />
 
           {/* Card 2: shifted down for intentional asymmetry */}
-          <EventCard event={DUMMY_EVENTS[1]} className="lg:mt-12" />
+          <EventCard
+            event={DUMMY_EVENTS[1]}
+            className="lg:mt-12"
+            onClick={() => openEvent(DUMMY_EVENTS[1].id)}
+          />
 
           {/* Card 3: standard vertical */}
-          <EventCard event={DUMMY_EVENTS[2]} />
+          <EventCard
+            event={DUMMY_EVENTS[2]}
+            onClick={() => openEvent(DUMMY_EVENTS[2].id)}
+          />
 
           {/* Card 4: wide horizontal — spans 2 columns */}
-          <EventCardWide event={FEATURED_EVENT} className="lg:col-span-2" />
+          <EventCardWide
+            event={FEATURED_EVENT}
+            className="lg:col-span-2"
+            onClick={() => openEvent(FEATURED_EVENT.id)}
+          />
         </div>
       </div>
 
       <FloatingActionButton />
+
+      {/* Event detail modal — driven by ?event=ID search param */}
+      {activeEventId && (
+        <EventDetailModal eventId={activeEventId} onClose={closeEvent} />
+      )}
     </main>
   );
 }

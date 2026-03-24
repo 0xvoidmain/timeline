@@ -20,14 +20,16 @@ export interface EventCardData {
 interface EventCardProps {
   event: EventCardData;
   className?: string;
+  onClick?: () => void;
 }
 
-export function EventCard({ event, className = "" }: EventCardProps) {
+export function EventCard({ event, className = "", onClick }: EventCardProps) {
   const aspect = event.aspectRatio ?? "aspect-video";
 
   return (
     <div
-      className={`glass-card rounded-xl overflow-hidden flex flex-col group border border-outline-variant/10 ${className}`}
+      className={`glass-card rounded-xl overflow-hidden flex flex-col group border border-outline-variant/10 ${onClick ? "cursor-pointer" : ""} ${className}`}
+      onClick={onClick}
     >
       {/* Image with gradient overlay + verification badge */}
       <div className={`relative ${aspect} overflow-hidden`}>

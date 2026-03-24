@@ -64,6 +64,13 @@ Tracking all features for the Timeline world event app. Updated after each featu
 - **Key Files**: `src/components/EngagementBar.tsx`
 - **Date**: 2026-03-25
 
+### Event Detail Modal
+
+- **Description**: Full-screen overlay modal for viewing detailed event information, triggered by clicking any event card; uses URL search params (`?event=ID`) for direct linking and bookmarkability
+- **Status**: Implemented
+- **Key Files**: `src/components/EventDetailModal.tsx`, `src/components/EventDetailHeader.tsx`, `src/components/MediaPlayer.tsx`, `src/components/StatsCard.tsx`, `src/components/QuoteCard.tsx`, `src/components/ContentSection.tsx`, `src/components/ReactionBar.tsx`, `src/components/CommentCard.tsx`, `src/data/dummyEventDetails.ts`, `src/components/EventCard.tsx`, `src/components/EventCardWide.tsx`, `src/pages/HomePage.tsx`
+- **Date**: 2026-03-25
+
 ### Event Card — Glassmorphism Redesign
 
 - **Description**: Rewritten event card with glassmorphism styling, image overlays, verification badges, and engagement bars using Digital Archive design tokens
