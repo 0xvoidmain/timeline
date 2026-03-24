@@ -40,7 +40,6 @@ export function TimelineNav({
   const [wheelHeight, setWheelHeight] = useState(0);
 
   /* Derived from dynamic height */
-  const halfWheel = wheelHeight / 2;
   const radius = wheelHeight / 2;
   const visibleItems = Math.max(Math.floor(wheelHeight / ITEM_HEIGHT), 1);
   const anglePerItem = 360 / (visibleItems * 2);
@@ -225,19 +224,6 @@ export function TimelineNav({
         <div className="pointer-events-none absolute inset-x-0 top-0 h-1/3 bg-gradient-to-b from-surface-container-low via-surface-container-low/80 to-transparent z-20" />
         <div className="pointer-events-none absolute inset-x-0 bottom-0 h-1/3 bg-gradient-to-t from-surface-container-low via-surface-container-low/80 to-transparent z-20" />
 
-        {/* Center selection indicator */}
-        {wheelHeight > 0 && (
-          <div
-            className="pointer-events-none absolute inset-x-6 z-10"
-            style={{
-              top: halfWheel - ITEM_HEIGHT / 2,
-              height: ITEM_HEIGHT,
-              borderTop: "1px solid rgba(233,193,118,0.3)",
-              borderBottom: "1px solid rgba(233,193,118,0.3)",
-            }}
-          />
-        )}
-
         {/* 3D barrel cylinder */}
         <div
           className="absolute inset-0 flex items-center justify-center"
@@ -254,7 +240,8 @@ export function TimelineNav({
             const translateY = Math.sin(radians) * radius;
             const translateZ = Math.cos(radians) * radius - radius;
             const opacity = Math.cos(radians);
-            const isActive = year === activeYear;
+            // proximity: 1 at center, 0 far away — drives continuous zoom effect
+            const proximity = Math.max(1 - Math.abs(angle) / 30, 0);
 
             return (
               <div
@@ -266,24 +253,26 @@ export function TimelineNav({
                   width: "100%",
                   paddingLeft: "2.5rem",
                   transform: `translateY(${translateY}px) translateZ(${translateZ}px) rotateX(${-angle}deg)`,
-                  opacity: Math.max(opacity, 0),
+                  opacity: Math.max(opacity * (0.7 + proximity * 0.7), 0),
                   backfaceVisibility: "hidden",
                 }}
               >
                 <span
-                  className="font-headline transition-all duration-300 ease-out"
+                  className="font-headline"
                   style={{
-                    fontSize: isActive ? "1.25rem" : "0.875rem",
-                    fontWeight: isActive ? 700 : 400,
-                    color: isActive
-                      ? "var(--color-primary)"
-                      : "var(--color-on-surface-variant)",
-                    textShadow: isActive
-                      ? "0 0 12px rgba(233,193,118,0.4)"
-                      : "none",
-                    transform: isActive ? "scale(1.1)" : "scale(1)",
+                    fontSize: `${0.875 + proximity * 0.5}rem`,
+                    fontWeight: proximity > 0.5 ? 700 : 400,
+                    color:
+                      proximity > 0.3
+                        ? `color-mix(in srgb, var(--color-primary) ${Math.round(proximity * 100)}%, var(--color-on-surface-variant))`
+                        : "var(--color-on-surface-variant)",
+                    textShadow:
+                      proximity > 0.5
+                        ? `0 0 ${Math.round(proximity * 12)}px rgba(233,193,118,${(proximity * 0.4).toFixed(2)})`
+                        : "none",
+                    transform: `scale(${1 + proximity * 0.15})`,
                     transformOrigin: "left center",
-                    letterSpacing: isActive ? "0.04em" : "0",
+                    letterSpacing: `${proximity * 0.04}em`,
                   }}
                 >
                   {formatYear(year)}
