@@ -3,6 +3,7 @@ import type {
   TimelineEvent,
   EventFilters,
   PaginatedResponse,
+  CreateEventInput,
 } from "../types";
 
 const BASE = "/api";
@@ -44,15 +45,13 @@ export const api = {
   getEvent: (id: string) =>
     request<{ event: TimelineEvent }>(`/events/${encodeURIComponent(id)}`),
 
-  createEvent: (
-    data: Omit<TimelineEvent, "_id" | "createdBy" | "createdAt" | "updatedAt">,
-  ) =>
+  createEvent: (data: CreateEventInput) =>
     request<{ event: TimelineEvent }>("/events", {
       method: "POST",
       body: JSON.stringify(data),
     }),
 
-  updateEvent: (id: string, data: Partial<TimelineEvent>) =>
+  updateEvent: (id: string, data: Partial<CreateEventInput>) =>
     request<{ event: TimelineEvent }>(`/events/${encodeURIComponent(id)}`, {
       method: "PUT",
       body: JSON.stringify(data),

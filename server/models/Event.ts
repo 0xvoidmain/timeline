@@ -1,4 +1,5 @@
 import mongoose, { Schema, type InferSchemaType } from "mongoose";
+import { VISIBILITY } from "../../shared/constants.ts";
 
 const eventSchema = new Schema(
   {
@@ -13,7 +14,7 @@ const eventSchema = new Schema(
     visibility: {
       type: String,
       required: true,
-      enum: ["public", "private", "anonymous"],
+      enum: VISIBILITY,
       default: "public",
       index: true,
     },

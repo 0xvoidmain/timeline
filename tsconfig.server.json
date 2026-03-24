@@ -6,12 +6,12 @@
     "strict": true,
     "skipLibCheck": true,
     "types": ["bun-types"],
-    "outDir": "./dist/server",
-    "rootDir": "./server",
+    "allowImportingTsExtensions": true,
+    "noEmit": true,
     "verbatimModuleSyntax": true,
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     "noFallthroughCasesInSwitch": true
   },
-  "include": ["server"]
+  "include": ["server", "shared"]
 }

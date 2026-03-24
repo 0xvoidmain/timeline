@@ -48,6 +48,13 @@ Tracking all features for the Timeline world event app. Updated after each featu
 - **Key Files**: `src/components/Navbar.tsx`, `src/context/AuthContext.tsx`
 - **Date**: 2026-03-24
 
+### Shared Types Architecture
+
+- **Description**: Single source of truth for types, Zod schemas, and constants shared between frontend and backend via a `shared/` directory
+- **Status**: Implemented
+- **Key Files**: `shared/types.ts`, `shared/schemas.ts`, `shared/constants.ts`, `src/types/index.ts`
+- **Date**: 2026-03-24
+
 ---
 
 ## In Progress

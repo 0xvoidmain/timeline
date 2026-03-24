@@ -1,35 +1,13 @@
-import { z } from "zod/v4";
 import type { BunRequest } from "bun";
 import { Event } from "../models/Event.ts";
 import { requireAuth } from "../middleware/auth.ts";
+import {
+  createEventSchema,
+  updateEventSchema,
+  listQuerySchema,
+} from "../../shared/schemas.ts";
 
 const OBJECT_ID_RE = /^[a-f0-9]{24}$/;
-
-const createEventSchema = z.object({
-  title: z.string().min(1).max(200),
-  description: z.string().min(1).max(5000),
-  date: z.iso.datetime(),
-  endDate: z.iso.datetime().optional(),
-  category: z.string().min(1).max(100),
-  country: z.string().min(1).max(100),
-  source: z.string().max(200).optional(),
-  sourceUrl: z.url().optional(),
-  visibility: z.enum(["public", "private", "anonymous"]).default("public"),
-  media: z.array(z.url()).max(10).optional(),
-  tags: z.array(z.string().max(50)).max(20).optional(),
-});
-
-const updateEventSchema = createEventSchema.partial();
-
-const listQuerySchema = z.object({
-  category: z.string().optional(),
-  country: z.string().optional(),
-  from: z.iso.datetime().optional(),
-  to: z.iso.datetime().optional(),
-  visibility: z.enum(["public", "private", "anonymous"]).optional(),
-  page: z.coerce.number().int().min(1).default(1),
-  limit: z.coerce.number().int().min(1).max(100).default(20),
-});
 
 export const eventRoutes = {
   "/api/events": {
