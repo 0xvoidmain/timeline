@@ -38,8 +38,16 @@ export function HomePage({
   const [searchParams, setSearchParams] = useSearchParams();
   const activeEventId = searchParams.get("event");
 
-  const openEvent = (id: string) => setSearchParams({ event: id });
-  const closeEvent = () => setSearchParams({});
+  const openEvent = (id: string) =>
+    setSearchParams((prev) => {
+      prev.set("event", id);
+      return prev;
+    });
+  const closeEvent = () =>
+    setSearchParams((prev) => {
+      prev.delete("event");
+      return prev;
+    });
 
   /* ── Scroll container ref ── */
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -56,6 +64,22 @@ export function HomePage({
   const lastReportedYear = useRef(activeYear);
   const isProgrammaticScroll = useRef(false);
   const scrollTimeoutRef = useRef<ReturnType<typeof setTimeout>>(undefined);
+  const initialScrollDone = useRef(false);
+
+  /** On first render, jump to the year that came from the route */
+  useEffect(() => {
+    if (initialScrollDone.current) return;
+    initialScrollDone.current = true;
+    const targetIdx = YEAR_HEADER_INDICES.get(activeYear);
+    if (targetIdx === undefined) return;
+    isProgrammaticScroll.current = true;
+    lastReportedYear.current = activeYear;
+    virtualizer.scrollToIndex(targetIdx, { align: "start" });
+    const timer = setTimeout(() => {
+      isProgrammaticScroll.current = false;
+    }, 200);
+    return () => clearTimeout(timer);
+  }, [activeYear, virtualizer]);
 
   const detectVisibleYear = useCallback(() => {
     if (isProgrammaticScroll.current) return;

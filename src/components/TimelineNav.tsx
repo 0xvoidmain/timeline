@@ -168,8 +168,9 @@ export function TimelineNav({
   const onPointerMove = useCallback(
     (e: React.PointerEvent) => {
       if (!isDragging.current) return;
-      const dy = dragStartY.current - e.clientY;
-      if (Math.abs(dy) > 3) dragMoved.current = true;
+      const dy = (dragStartY.current - e.clientY) * 0.35; // Apply drag resistance
+      if (Math.abs(dragStartY.current - e.clientY) > 3)
+        dragMoved.current = true;
       const newOffset = clamp(dragStartOffset.current + dy);
       offsetRef.current = newOffset;
       setScrollOffset(newOffset);
@@ -192,20 +193,26 @@ export function TimelineNav({
       (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId);
 
       if (!dragMoved.current) {
-        // Click, not drag — reverse the barrel projection to find the clicked year
+        // Click, not drag — find the exact item at the clicked position
         const container = containerRef.current;
         if (container) {
           const rect = container.getBoundingClientRect();
           const centerY = rect.top + rect.height / 2;
-          // Positive = clicked below center, negative = above
           const clickFromCenter = e.clientY - centerY;
-          // Reverse: translateY = sin(radians) * radius → radians = asin(clickFromCenter / radius)
           const r = radius || 1;
           const clamped = Math.max(-1, Math.min(1, clickFromCenter / r));
           const radians = Math.asin(clamped);
           const angleDeg = (radians * 180) / Math.PI;
-          const itemOffset = (angleDeg / anglePerItem) * ITEM_HEIGHT;
-          animateTo(offsetRef.current + itemOffset);
+          // Convert angle to exact item index and round to nearest
+          const currentCenterIdx = offsetRef.current / ITEM_HEIGHT;
+          const targetIdx = Math.round(
+            currentCenterIdx + angleDeg / anglePerItem,
+          );
+          const clampedIdx = Math.max(
+            0,
+            Math.min(YEAR_MARKERS.length - 1, targetIdx),
+          );
+          animateTo(clampedIdx * ITEM_HEIGHT);
         }
         return;
       }

@@ -2,15 +2,21 @@
 
 import { SearchInput } from "./SearchInput";
 
-const NAV_LINKS = [
-  { label: "Lịch sử", href: "#", active: false },
-  { label: "Văn hóa", href: "#", active: false },
-  { label: "Âm nhạc", href: "#", active: true },
-  { label: "Phim ảnh", href: "#", active: false },
-  { label: "Xu hướng", href: "#", active: false },
+const CATEGORIES = [
+  { label: "Tất cả", slug: "all" },
+  { label: "Lịch sử", slug: "history" },
+  { label: "Văn hóa", slug: "culture" },
+  { label: "Âm nhạc", slug: "music" },
+  { label: "Phim ảnh", slug: "cinema" },
+  { label: "Xu hướng", slug: "trending" },
 ];
 
-export function Navbar() {
+interface NavbarProps {
+  activeCategory?: string;
+  onCategoryChange?: (category: string) => void;
+}
+
+export function Navbar({ activeCategory, onCategoryChange }: NavbarProps) {
   return (
     <header className="fixed top-0 w-full z-50 bg-surface/90 backdrop-blur-md flex justify-between items-center px-8 py-4">
       {/* Logo */}
@@ -20,18 +26,19 @@ export function Navbar() {
 
       {/* Category navigation links */}
       <nav className="hidden md:flex items-center gap-8">
-        {NAV_LINKS.map((link) => (
-          <a
-            key={link.label}
-            href={link.href}
+        {CATEGORIES.map((cat) => (
+          <button
+            key={cat.slug}
+            type="button"
+            onClick={() => onCategoryChange?.(cat.slug)}
             className={
-              link.active
+              cat.slug === activeCategory
                 ? "font-label uppercase tracking-wider text-[12px] text-primary border-b-2 border-primary pb-1"
                 : "font-label uppercase tracking-wider text-[12px] text-on-surface-variant/60 hover:text-primary transition-colors"
             }
           >
-            {link.label}
-          </a>
+            {cat.label}
+          </button>
         ))}
       </nav>
 

@@ -42,6 +42,13 @@ Tracking all features for the Timeline world event app. Updated after each featu
 - **Key Files**: `server/models/Event.ts`, `server/routes/events.ts`
 - **Date**: 2026-03-24
 
+### All Category Default
+
+- **Description**: "Tất cả" (All) added as the default first category option in the Navbar; selecting it shows events from all categories; default route is `/2026/all`
+- **Status**: Implemented
+- **Key Files**: `src/components/Navbar.tsx`, `src/App.tsx`
+- **Date**: 2026-03-25
+
 ### Navigation Bar
 
 - **Description**: Top navigation with app branding, auth state display, and login/logout buttons
@@ -49,6 +56,14 @@ Tracking all features for the Timeline world event app. Updated after each featu
 - **Key Files**: `src/components/Navbar.tsx`, `src/context/AuthContext.tsx`
 - **Date**: 2026-03-24
 - **Note**: Rewritten as part of Homepage UI — The Digital Archive (2026-03-25)
+
+### Path-based Routing
+
+- **Description**: URL structure uses path segments `/:year/:category` (e.g. `/2026/all`, `/2000/music`) instead of search params; unmatched URLs redirect to `/2026/all`; event detail modal still uses `?event=ID` search params; HomePage scrolls to the correct year section on initial load based on the URL path
+- **Status**: Implemented
+- **Key Files**: `src/App.tsx`, `src/pages/HomePage.tsx`, `src/components/Navbar.tsx`, `src/components/TimelineNav.tsx`
+- **Date**: 2026-03-25
+- **Note**: Replaces URL Search Params Sync
 
 ### Design System Foundation — The Digital Archive
 
@@ -152,6 +167,7 @@ _No features currently in progress._
 - **Status**: Planned
 - **Key Files**: TBD
 - **Date**: —
+- **Note**: Category filtering partially covered by Path-based Routing
 
 ### Add Event Form
 
@@ -177,6 +193,14 @@ _No features currently in progress._
 ---
 
 ## Removed
+
+### URL Search Params Sync
+
+- **Description**: Year and category state sync to browser URL as `?year=XXXX&category=slug` search params; state initializes from URL on page load; Navbar category links act as toggle buttons (re-clicking deselects); existing `?event=ID` param is preserved across changes
+- **Status**: Removed
+- **Key Files**: `src/App.tsx`, `src/pages/HomePage.tsx`, `src/components/Navbar.tsx`, `src/components/TimelineNav.tsx`
+- **Date**: 2026-03-25
+- **Note**: Replaced by Path-based Routing (2026-03-25)
 
 ### Sidebar
 
