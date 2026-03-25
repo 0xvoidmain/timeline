@@ -22,10 +22,11 @@ Tracking all features for the Timeline world event app. Updated after each featu
 
 ### Event CRUD API
 
-- **Description**: RESTful API for creating, reading, updating, and deleting timeline events with Zod validation
+- **Description**: RESTful API for creating, reading, updating, and deleting timeline events with Zod validation; events support slug, image, eventType, status, sources array, metadata array, period (anniversary), scoring (baseScore/engagementScore/score), versioning (currentVersion), denormalized reactionCounts/commentCount/viewCount, contributors array, and approval fields (approvedBy/approvedAt/reviewNote); POST creates initial EventVersion snapshot and updates Category/YearStat counts; PUT creates version snapshot; DELETE decrements stats; includes GET `/api/events/:id/versions` for version history and POST `/api/events/:id/approve` for moderator/admin approval
 - **Status**: Implemented
 - **Key Files**: `server/routes/events.ts`, `server/models/Event.ts`, `src/services/api.ts`
-- **Date**: 2026-03-24
+- **Date**: 2026-03-25
+- **Note**: Updated 2026-03-25: expanded with slug, image, eventType, status, sources, metadata, period, scoring, versioning, denormalized counts, contributors, and approval endpoints
 
 ### Event Listing Page
 
@@ -37,10 +38,11 @@ Tracking all features for the Timeline world event app. Updated after each featu
 
 ### Event Visibility (API)
 
-- **Description**: Events can be public, private, or anonymous; filtering respects visibility settings
+- **Description**: Events can be public, private, or anonymous; filtering respects visibility settings and also supports filtering by eventType and status
 - **Status**: Implemented
 - **Key Files**: `server/models/Event.ts`, `server/routes/events.ts`
-- **Date**: 2026-03-24
+- **Date**: 2026-03-25
+- **Note**: Updated 2026-03-25: added eventType and status filtering
 
 ### All Category Default
 
@@ -132,10 +134,11 @@ Tracking all features for the Timeline world event app. Updated after each featu
 
 ### Shared Types Architecture
 
-- **Description**: Single source of truth for types, Zod schemas, and constants shared between frontend and backend via a `shared/` directory
+- **Description**: Single source of truth for types, Zod schemas, and constants shared between frontend and backend via a `shared/` directory; includes 10+ interfaces (Category, YearStat, Comment, Reaction, ReactionTypeConfig, EventVersion, EventSource, EventMetadata, EventPeriod, EventContributor, ReactionCount), validation schemas (createCommentSchema, createReactionSchema, createCategorySchema, approveEventSchema, createReactionTypeSchema), and constants (EVENT_STATUS, EVENT_TYPE, USER_ROLE, REACTION_TARGET, DEFAULT_REACTION_TYPES)
 - **Status**: Implemented
 - **Key Files**: `shared/types.ts`, `shared/schemas.ts`, `shared/constants.ts`, `src/types/index.ts`
-- **Date**: 2026-03-24
+- **Date**: 2026-03-25
+- **Note**: Updated 2026-03-25: expanded with 10+ new interfaces, new Zod schemas, and new constants
 
 ### Timeline Navigation
 
@@ -157,6 +160,98 @@ Tracking all features for the Timeline world event app. Updated after each featu
 - **Description**: Verified/pending status pill overlay for event cards
 - **Status**: Implemented
 - **Key Files**: `src/components/VerificationBadge.tsx`
+- **Date**: 2026-03-25
+
+### Anniversary Events
+
+- **Description**: Events can be type "anniversary" with an optional period field (startYear, endYear, description) representing the time span the event reflects, separate from the display date
+- **Status**: Implemented
+- **Key Files**: `server/models/Event.ts`, `shared/schemas.ts`, `shared/types.ts`
+- **Date**: 2026-03-25
+
+### Category Management
+
+- **Description**: Dedicated Category collection with name, slug, icon, color, order, and eventCount; REST API for CRUD (admin-only for writes); event counts auto-update on event create/delete
+- **Status**: Implemented
+- **Key Files**: `server/models/Category.ts`, `server/routes/categories.ts`, `src/services/api.ts`
+- **Date**: 2026-03-25
+
+### Comments System
+
+- **Description**: Threaded comments on events with support for nested replies up to depth 3; comment CRUD with ownership checks; moderator/admin can delete any comment; event's commentCount auto-updated
+- **Status**: Implemented
+- **Key Files**: `server/models/Comment.ts`, `server/routes/comments.ts`, `src/services/api.ts`
+- **Date**: 2026-03-25
+
+### Configurable Reaction Types
+
+- **Description**: Admin-manageable reaction types with name, icon (Material Symbols), label, color, and sort order; default types seeded: like, love, sad, wow, angry; API for listing active types and admin CRUD
+- **Status**: Implemented
+- **Key Files**: `server/models/ReactionType.ts`, `server/routes/reaction-types.ts`, `src/services/api.ts`
+- **Date**: 2026-03-25
+
+### Database Migration Script
+
+- **Description**: Migration script to upgrade existing data: migrate source/sourceUrl to sources array, generate slugs, set default values for new fields, seed Category/YearStat/ReactionType collections from existing data; run with `bun run server/scripts/migrate-v2.ts`
+- **Status**: Implemented
+- **Key Files**: `server/scripts/migrate-v2.ts`
+- **Date**: 2026-03-25
+
+### Event Approval Workflow
+
+- **Description**: Public events require moderator/admin approval; events go through draft → pending → verified/rejected status flow; role-based access control: only moderator and admin users can approve or reject events; approval metadata (approvedBy, approvedAt, reviewNote) stored on the event
+- **Status**: Implemented
+- **Key Files**: `server/models/Event.ts`, `server/routes/events.ts`, `server/middleware/auth.ts`, `shared/constants.ts`
+- **Date**: 2026-03-25
+
+### Event Scoring
+
+- **Description**: Events have baseScore (manually set), engagementScore (computed from reactions/views/comments), and score (sum of both); score is indexed for sorting and can be used by the UI to highlight important events
+- **Status**: Implemented
+- **Key Files**: `server/models/Event.ts`, `shared/types.ts`
+- **Date**: 2026-03-25
+
+### Event Versioning
+
+- **Description**: Full snapshot version history for events; every edit creates an EventVersion record with the complete event state before changes; versions are auto-numbered; API endpoints to list and retrieve version history
+- **Status**: Implemented
+- **Key Files**: `server/models/EventVersion.ts`, `server/routes/events.ts`, `src/services/api.ts`
+- **Date**: 2026-03-25
+
+### Flexible Event Metadata
+
+- **Description**: Events have a metadata array of {label, info, group} objects for storing flexible key-value information that doesn't fit fixed schema fields; supports grouping for UI organization
+- **Status**: Implemented
+- **Key Files**: `server/models/Event.ts`, `shared/schemas.ts`, `shared/types.ts`
+- **Date**: 2026-03-25
+
+### Reactions System
+
+- **Description**: Flexible reaction system for both events and comments; toggle-based (add/remove); denormalized reaction counts on target documents for fast reads; unique constraint ensures one reaction of each type per user per target
+- **Status**: Implemented
+- **Key Files**: `server/models/Reaction.ts`, `server/routes/reactions.ts`, `src/services/api.ts`
+- **Date**: 2026-03-25
+
+### Rich Event Sources
+
+- **Description**: Events store sources as an array of {title, content, url} instead of single source/sourceUrl fields; supports multiple citations with descriptions
+- **Status**: Implemented
+- **Key Files**: `server/models/Event.ts`, `shared/schemas.ts`, `shared/types.ts`
+- **Date**: 2026-03-25
+- **Note**: Replaces the old source/sourceUrl fields; migration script handles conversion
+
+### User Roles
+
+- **Description**: Users have a role field (user, moderator, admin); role-based middleware (requireRole) protects admin/moderator-only endpoints; default role is "user"
+- **Status**: Implemented
+- **Key Files**: `server/models/User.ts`, `server/middleware/auth.ts`, `shared/constants.ts`
+- **Date**: 2026-03-25
+
+### Year Statistics
+
+- **Description**: YearStat collection tracks event count per year; auto-updated on event create/delete; API endpoint to list years with event counts
+- **Status**: Implemented
+- **Key Files**: `server/models/YearStat.ts`, `server/routes/years.ts`, `src/services/api.ts`
 - **Date**: 2026-03-25
 
 ---

@@ -5,6 +5,31 @@ export type {
   PaginatedResponse,
   CreateEventInput,
   UpdateEventInput,
+  EventSource,
+  EventMetadata,
+  EventPeriod,
+  EventContributor,
+  ReactionCount,
+  Category,
+  YearStat,
+  Comment,
+  Reaction,
+  ReactionTypeConfig,
+  EventVersion,
+  CreateCommentInput,
+  CreateReactionInput,
+  CreateCategoryInput,
+  UpdateCategoryInput,
+  ApproveEventInput,
+  CreateReactionTypeInput,
+  UpdateReactionTypeInput,
+  PaginatedComments,
 } from "../../shared/types.ts";
 
-export type { Visibility } from "../../shared/constants.ts";
+export type {
+  Visibility,
+  EventStatus,
+  EventType,
+  UserRole,
+  ReactionTarget,
+} from "../../shared/constants.ts";

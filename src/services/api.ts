@@ -4,6 +4,20 @@ import type {
   EventFilters,
   PaginatedResponse,
   CreateEventInput,
+  ApproveEventInput,
+  EventVersion,
+  Category,
+  CreateCategoryInput,
+  UpdateCategoryInput,
+  YearStat,
+  Comment,
+  CreateCommentInput,
+  CreateReactionInput,
+  ReactionTypeConfig,
+  CreateReactionTypeInput,
+  UpdateReactionTypeInput,
+  Reaction,
+  PaginatedComments,
 } from "../types";
 
 const BASE = "/api";
@@ -28,7 +42,8 @@ export const api = {
   getMe: () => request<{ user: User | null }>("/auth/me"),
   logout: () => request<{ ok: boolean }>("/auth/logout"),
 
-  // Events
+  // ── Events ──
+
   listEvents: (filters?: EventFilters) => {
     const params = new URLSearchParams();
     if (filters) {
@@ -61,4 +76,97 @@ export const api = {
     request<{ ok: boolean }>(`/events/${encodeURIComponent(id)}`, {
       method: "DELETE",
     }),
+
+  approveEvent: (id: string, data: ApproveEventInput) =>
+    request<{ event: TimelineEvent }>(
+      `/events/${encodeURIComponent(id)}/approve`,
+      { method: "POST", body: JSON.stringify(data) },
+    ),
+
+  // ── Event versions ──
+
+  listEventVersions: (eventId: string) =>
+    request<{ versions: EventVersion[] }>(
+      `/events/${encodeURIComponent(eventId)}/versions`,
+    ),
+
+  // ── Categories ──
+
+  listCategories: () => request<{ categories: Category[] }>("/categories"),
+
+  createCategory: (data: CreateCategoryInput) =>
+    request<{ category: Category }>("/categories", {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+
+  updateCategory: (id: string, data: UpdateCategoryInput) =>
+    request<{ category: Category }>(`/categories/${encodeURIComponent(id)}`, {
+      method: "PUT",
+      body: JSON.stringify(data),
+    }),
+
+  deleteCategory: (id: string) =>
+    request<{ category: Category }>(`/categories/${encodeURIComponent(id)}`, {
+      method: "DELETE",
+    }),
+
+  // ── Year stats ──
+
+  listYearStats: () => request<{ years: YearStat[] }>("/years"),
+
+  // ── Comments ──
+
+  listComments: (eventId: string, page = 1, limit = 20) =>
+    request<PaginatedComments>(
+      `/events/${encodeURIComponent(eventId)}/comments?page=${page}&limit=${limit}`,
+    ),
+
+  createComment: (eventId: string, data: CreateCommentInput) =>
+    request<{ comment: Comment }>(
+      `/events/${encodeURIComponent(eventId)}/comments`,
+      { method: "POST", body: JSON.stringify(data) },
+    ),
+
+  editComment: (id: string, text: string) =>
+    request<{ comment: Comment }>(`/comments/${encodeURIComponent(id)}`, {
+      method: "PUT",
+      body: JSON.stringify({ text }),
+    }),
+
+  deleteComment: (id: string) =>
+    request<{ ok: boolean }>(`/comments/${encodeURIComponent(id)}`, {
+      method: "DELETE",
+    }),
+
+  // ── Reactions ──
+
+  toggleReaction: (data: CreateReactionInput) =>
+    request<{ action: "added" | "removed"; type: string }>("/reactions", {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+
+  getReactions: (targetType: string, targetId: string, userId?: string) => {
+    const params = new URLSearchParams({ targetType, targetId });
+    if (userId) params.set("userId", userId);
+    return request<{ reactions: Reaction[] }>(`/reactions?${params}`);
+  },
+
+  // ── Reaction types ──
+
+  listReactionTypes: () =>
+    request<{ types: ReactionTypeConfig[] }>("/reaction-types"),
+
+  createReactionType: (data: CreateReactionTypeInput) =>
+    request<{ reactionType: ReactionTypeConfig }>("/reaction-types", {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+
+  updateReactionType: (id: string, data: UpdateReactionTypeInput) =>
+    request<{ reactionType: ReactionTypeConfig }>(
+      `/reaction-types/${encodeURIComponent(id)}`,
+      { method: "PUT", body: JSON.stringify(data) },
+    ),
 };

@@ -90,7 +90,7 @@ export function HomePage() {
     if (targetIdx === undefined) return;
     isProgrammaticScroll.current = true;
     lastReportedYear.current = activeYear;
-    const timer = setTimeout(() => {
+    setTimeout(() => {
       virtualizer.scrollToIndex(targetIdx, { align: "start" });
       isProgrammaticScroll.current = false;
     }, 200);

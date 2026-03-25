@@ -1,13 +1,47 @@
 import type { BunRequest } from "bun";
 import { Event } from "../models/Event.ts";
-import { requireAuth } from "../middleware/auth.ts";
+import { EventVersion } from "../models/EventVersion.ts";
+import { Category } from "../models/Category.ts";
+import { YearStat } from "../models/YearStat.ts";
+import { requireAuth, requireRole } from "../middleware/auth.ts";
 import {
   createEventSchema,
   updateEventSchema,
   listQuerySchema,
+  approveEventSchema,
 } from "../../shared/schemas.ts";
 
 const OBJECT_ID_RE = /^[a-f0-9]{24}$/;
+
+function slugify(text: string): string {
+  return text
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
+
+async function incrementStats(category: string, year: number) {
+  await Promise.all([
+    Category.findOneAndUpdate({ slug: category }, { $inc: { eventCount: 1 } }),
+    YearStat.findOneAndUpdate(
+      { year },
+      { $inc: { eventCount: 1 }, $set: { updatedAt: new Date() } },
+      { upsert: true },
+    ),
+  ]);
+}
+
+async function decrementStats(category: string, year: number) {
+  await Promise.all([
+    Category.findOneAndUpdate({ slug: category }, { $inc: { eventCount: -1 } }),
+    YearStat.findOneAndUpdate(
+      { year },
+      { $inc: { eventCount: -1 }, $set: { updatedAt: new Date() } },
+    ),
+  ]);
+}
 
 export const eventRoutes = {
   "/api/events": {
@@ -23,13 +57,24 @@ export const eventRoutes = {
         );
       }
 
-      const { category, country, from, to, visibility, page, limit } =
-        parsed.data;
+      const {
+        category,
+        country,
+        from,
+        to,
+        visibility,
+        eventType,
+        status,
+        page,
+        limit,
+      } = parsed.data;
       const filter: Record<string, unknown> = {};
       if (category) filter.category = category;
       if (country) filter.country = country;
+      if (eventType) filter.eventType = eventType;
+      if (status) filter.status = status;
       if (visibility) filter.visibility = visibility;
-      else filter.visibility = { $in: ["public", "anonymous"] }; // default: public events
+      else filter.visibility = { $in: ["public", "anonymous"] };
       if (from || to) {
         filter.date = {};
         if (from)
@@ -42,11 +87,12 @@ export const eventRoutes = {
           .sort({ date: -1 })
           .skip((page - 1) * limit)
           .limit(limit)
-          .populate("createdBy", "name avatar"),
+          .populate("createdBy", "name avatar")
+          .populate("approvedBy", "name avatar"),
         Event.countDocuments(filter),
       ]);
 
-      return Response.json({ events, total, page, limit });
+      return Response.json({ data: events, total, page, limit });
     },
 
     // POST /api/events — create (auth required)
@@ -59,7 +105,29 @@ export const eventRoutes = {
           { status: 400 },
         );
       }
-      const event = await Event.create({ ...parsed.data, createdBy: userId });
+
+      const data = parsed.data;
+      const slug = data.slug || slugify(data.title);
+      const event = await Event.create({
+        ...data,
+        slug,
+        createdBy: userId,
+        contributors: [{ user: userId, role: "author" }],
+      });
+
+      // Create initial version snapshot
+      await EventVersion.create({
+        eventId: event._id,
+        version: 1,
+        snapshot: event.toObject(),
+        editedBy: userId,
+        editNote: "Initial version",
+      });
+
+      // Update stats
+      const year = new Date(data.date).getFullYear();
+      await incrementStats(data.category, year);
+
       return Response.json({ event }, { status: 201 });
     }),
   },
@@ -71,11 +139,15 @@ export const eventRoutes = {
       if (!OBJECT_ID_RE.test(id)) {
         return Response.json({ error: "Invalid event ID" }, { status: 400 });
       }
-      const event = await Event.findById(id).populate(
-        "createdBy",
-        "name avatar",
-      );
+      const event = await Event.findById(id)
+        .populate("createdBy", "name avatar")
+        .populate("approvedBy", "name avatar")
+        .populate("contributors.user", "name avatar");
       if (!event) return Response.json({ error: "Not found" }, { status: 404 });
+
+      // Increment view count (fire-and-forget)
+      Event.updateOne({ _id: id }, { $inc: { viewCount: 1 } }).exec();
+
       return Response.json({ event });
     },
 
@@ -100,7 +172,18 @@ export const eventRoutes = {
             { status: 400 },
           );
         }
+
+        // Create version snapshot before applying changes
+        await EventVersion.create({
+          eventId: event._id,
+          version: event.currentVersion,
+          snapshot: event.toObject(),
+          editedBy: userId,
+        });
+
         Object.assign(event, parsed.data);
+        event.currentVersion += 1;
+        event.score = event.baseScore + event.engagementScore;
         await event.save();
         return Response.json({ event });
       })(req);
@@ -119,9 +202,66 @@ export const eventRoutes = {
         if (event.createdBy.toString() !== userId) {
           return Response.json({ error: "Forbidden" }, { status: 403 });
         }
+
+        const year = event.date.getFullYear();
         await event.deleteOne();
+        await decrementStats(event.category, year);
+
         return Response.json({ ok: true });
       })(req);
+    },
+  },
+
+  // ── Approval ──
+  "/api/events/:id/approve": {
+    POST: async (req: BunRequest<"/api/events/:id/approve">) => {
+      const { id } = req.params;
+      if (!OBJECT_ID_RE.test(id)) {
+        return Response.json({ error: "Invalid event ID" }, { status: 400 });
+      }
+      return requireRole(
+        "moderator",
+        "admin",
+      )(async (innerReq, userId) => {
+        const body = await innerReq.json();
+        const parsed = approveEventSchema.safeParse(body);
+        if (!parsed.success) {
+          return Response.json(
+            { error: "Validation failed", details: parsed.error.issues },
+            { status: 400 },
+          );
+        }
+
+        const event = await Event.findById(id);
+        if (!event)
+          return Response.json({ error: "Not found" }, { status: 404 });
+
+        event.status = parsed.data.status;
+        event.approvedBy = new (
+          await import("mongoose")
+        ).default.Types.ObjectId(userId);
+        event.approvedAt = new Date();
+        if (parsed.data.reviewNote) event.reviewNote = parsed.data.reviewNote;
+        await event.save();
+
+        return Response.json({ event });
+      })(req);
+    },
+  },
+
+  // ── Version history ──
+  "/api/events/:id/versions": {
+    GET: async (req: BunRequest<"/api/events/:id/versions">) => {
+      const { id } = req.params;
+      if (!OBJECT_ID_RE.test(id)) {
+        return Response.json({ error: "Invalid event ID" }, { status: 400 });
+      }
+
+      const versions = await EventVersion.find({ eventId: id })
+        .sort({ version: -1 })
+        .populate("editedBy", "name avatar");
+
+      return Response.json({ versions });
     },
   },
 } as const;

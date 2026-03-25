@@ -1,5 +1,5 @@
 import mongoose, { Schema, type InferSchemaType } from "mongoose";
-import { AUTH_PROVIDERS } from "../../shared/constants.ts";
+import { AUTH_PROVIDERS, USER_ROLE } from "../../shared/constants.ts";
 
 const userSchema = new Schema({
   email: { type: String, required: true, unique: true },
@@ -7,6 +7,13 @@ const userSchema = new Schema({
   avatar: { type: String, default: "" },
   provider: { type: String, required: true, enum: AUTH_PROVIDERS },
   providerId: { type: String, required: true },
+  role: {
+    type: String,
+    required: true,
+    enum: USER_ROLE,
+    default: "user",
+    index: true,
+  },
   createdAt: { type: Date, default: Date.now },
 });
 

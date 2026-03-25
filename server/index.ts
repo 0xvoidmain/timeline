@@ -1,6 +1,11 @@
 import { connectDB } from "./config/db.ts";
 import { authRoutes } from "./routes/auth.ts";
 import { eventRoutes } from "./routes/events.ts";
+import { commentRoutes } from "./routes/comments.ts";
+import { reactionRoutes } from "./routes/reactions.ts";
+import { categoryRoutes } from "./routes/categories.ts";
+import { yearRoutes } from "./routes/years.ts";
+import { reactionTypeRoutes } from "./routes/reaction-types.ts";
 
 const PORT = Number(process.env.PORT) || 3000;
 
@@ -16,6 +21,11 @@ Bun.serve({
       }),
     ...authRoutes,
     ...eventRoutes,
+    ...commentRoutes,
+    ...reactionRoutes,
+    ...categoryRoutes,
+    ...yearRoutes,
+    ...reactionTypeRoutes,
   },
   fetch(req) {
     // CORS preflight for development
