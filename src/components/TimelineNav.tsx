@@ -59,6 +59,22 @@ export function TimelineNav({
   /** Clamp offset within bounds */
   const clamp = (v: number) => Math.max(0, Math.min(v, maxOffset));
 
+  /** Ref to suppress onYearClick during external (controlled) updates */
+  const isExternalUpdate = useRef(false);
+
+  /** Snap to nearest item — silent version (no callback) */
+  const snapToSilent = useCallback(
+    (offset: number) => {
+      const idx = Math.round(clamp(offset) / ITEM_HEIGHT);
+      const snapped = idx * ITEM_HEIGHT;
+      offsetRef.current = snapped;
+      setScrollOffset(snapped);
+      const year = YEAR_MARKERS[idx];
+      if (year !== undefined) setInternalYear(year);
+    },
+    [maxOffset],
+  );
+
   /** Snap to nearest item */
   const snapTo = useCallback(
     (offset: number) => {
@@ -69,7 +85,9 @@ export function TimelineNav({
       const year = YEAR_MARKERS[idx];
       if (year !== undefined) {
         setInternalYear(year);
-        onYearClick?.(year);
+        if (!isExternalUpdate.current) {
+          onYearClick?.(year);
+        }
       }
     },
     [onYearClick, maxOffset],
@@ -77,15 +95,17 @@ export function TimelineNav({
 
   /** Animate to a target offset with spring-like easing */
   const animateTo = useCallback(
-    (target: number) => {
+    (target: number, silent = false) => {
       cancelAnimationFrame(momentumFrame.current);
       const snappedTarget =
         Math.round(clamp(target) / ITEM_HEIGHT) * ITEM_HEIGHT;
+      const doSnap = silent ? snapToSilent : snapTo;
       const animate = () => {
         const current = offsetRef.current;
         const diff = snappedTarget - current;
         if (Math.abs(diff) < 0.5) {
-          snapTo(snappedTarget);
+          doSnap(snappedTarget);
+          if (silent) isExternalUpdate.current = false;
           return;
         }
         const next = current + diff * 0.15;
@@ -95,7 +115,7 @@ export function TimelineNav({
       };
       animate();
     },
-    [snapTo, maxOffset],
+    [snapTo, snapToSilent, maxOffset],
   );
 
   /** Initialize to activeYear position */
@@ -107,6 +127,18 @@ export function TimelineNav({
       setScrollOffset(offset);
     }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  /** Sync wheel position when controlledYear changes externally */
+  useEffect(() => {
+    if (controlledYear === undefined) return;
+    const idx = YEAR_MARKERS.indexOf(controlledYear);
+    if (idx < 0) return;
+    const targetOffset = idx * ITEM_HEIGHT;
+    // Skip if already at this year (within 1 item tolerance)
+    if (Math.abs(offsetRef.current - targetOffset) < ITEM_HEIGHT * 0.5) return;
+    isExternalUpdate.current = true;
+    animateTo(targetOffset, true);
+  }, [controlledYear, animateTo]);
 
   /** Measure container height and track resizes */
   useEffect(() => {

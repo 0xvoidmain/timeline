@@ -98,6 +98,7 @@ Tracking all features for the Timeline world event app. Updated after each featu
 - **Status**: Implemented
 - **Key Files**: `src/pages/HomePage.tsx`, `src/components/EventCard.tsx`, `src/components/EventCardWide.tsx`, `src/components/Navbar.tsx`, `src/components/TimelineNav.tsx`, `src/App.tsx`
 - **Date**: 2026-03-25
+- **Note**: HomePage rewritten with virtual scrolling year sections (2026-03-25)
 
 ### Search Input
 
@@ -119,7 +120,14 @@ Tracking all features for the Timeline world event app. Updated after each featu
 - **Status**: Implemented
 - **Key Files**: `src/components/TimelineNav.tsx`, `src/App.tsx`, `src/pages/HomePage.tsx`
 - **Date**: 2026-03-25
-- **Note**: Merged Sidebar shell into TimelineNav (2026-03-25); removed zoom slider, settings/help footer, and era header
+- **Note**: Merged Sidebar shell into TimelineNav (2026-03-25); removed zoom slider, settings/help footer, and era header. Updated with controlled year sync for bidirectional scroll↔nav linking (2026-03-25)
+
+### Virtual Scrolling Year Timeline
+
+- **Description**: Events grouped by year (2026→2000) with continuous vertical scrolling, virtualized rendering via @tanstack/react-virtual, bidirectional sync between scroll position and TimelineNav active year
+- **Status**: Implemented
+- **Key Files**: `src/data/dummyEvents.ts`, `src/pages/HomePage.tsx`, `src/components/TimelineNav.tsx`, `src/App.tsx`, `package.json`
+- **Date**: 2026-03-25
 
 ### Verification Badge
 
