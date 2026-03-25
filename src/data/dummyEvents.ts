@@ -231,6 +231,17 @@ const TEMPLATES: Record<string, { titles: string[]; descriptions: string[] }> =
     },
   };
 
+/* ── Slugify helper ── */
+function slugify(text: string): string {
+  return text
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "") // strip diacritics
+    .replace(/đ/g, "d")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
+
 /* ── Seeded pseudo-random (deterministic, no Math.random) ── */
 function seededRandom(seed: number): () => number {
   let s = seed;
@@ -329,6 +340,9 @@ const EXISTING_EVENTS: Record<
     events: [
       {
         id: "1",
+        slug: "album-vo-nguoi-ta-phan-manh-quynh",
+        category: "music",
+        year: 2007,
         image: IMAGES[0],
         date: "15 Tháng 5, 2007",
         title: 'Album "Vợ Người Ta" - Phan Mạnh Quỳnh',
@@ -346,6 +360,9 @@ const EXISTING_EVENTS: Record<
     events: [
       {
         id: "2",
+        slug: "phat-hanh-phim-bay-rong",
+        category: "cinema",
+        year: 2010,
         image: IMAGES[1],
         date: "20 Tháng 9, 2010",
         title: "Phát hành phim 'Bẫy Rồng'",
@@ -364,6 +381,9 @@ const EXISTING_EVENTS: Record<
     events: [
       {
         id: "3",
+        slug: "son-tung-m-tp-chac-ai-do-se-ve",
+        category: "music",
+        year: 2014,
         image: IMAGES[2],
         date: "05 Tháng 11, 2014",
         title: 'Sơn Tùng M-TP & "Chắc Ai Đó Sẽ Về"',
@@ -377,6 +397,9 @@ const EXISTING_EVENTS: Record<
     ],
     featured: {
       id: "4",
+      slug: "phim-tai-lieu-nhung-nam-thang-hao-hung",
+      category: "music",
+      year: 2014,
       image: IMAGES[3],
       date: "Sưu tầm: Lưu trữ quốc gia",
       title: 'Phim tài liệu "Những Năm Tháng Hào Hùng"',
@@ -394,8 +417,11 @@ const EXISTING_EVENTS: Record<
 function generateYearEvents(
   year: number,
   category: string,
+  categoryEn: string,
   rand: () => number,
 ): { events: EventCardData[]; featured?: EventCardData } {
+  const catSlug = categoryEn.toLowerCase();
+
   // Use existing events for backward compat years
   if (EXISTING_EVENTS[year]) {
     const existing = EXISTING_EVENTS[year];
@@ -408,11 +434,15 @@ function generateYearEvents(
       const dIdx = Math.floor(rand() * templates.descriptions.length);
       const month = Math.floor(rand() * 12);
       const day = Math.floor(rand() * 28) + 1;
+      const title = templates.titles[tIdx];
       extra.push({
         id: `${year}-${i}`,
+        slug: slugify(title) + `-${i}`,
+        category: catSlug,
+        year,
         image: IMAGES[Math.floor(rand() * IMAGES.length)],
         date: `${String(day).padStart(2, "0")} ${MONTHS[month]}, ${year}`,
-        title: templates.titles[tIdx],
+        title,
         description: templates.descriptions[dIdx],
         likes: Math.floor(rand() * 5000) + 100,
         loves: Math.floor(rand() * 3000) + 50,
@@ -436,11 +466,15 @@ function generateYearEvents(
     const dIdx = Math.floor(rand() * templates.descriptions.length);
     const month = Math.floor(rand() * 12);
     const day = Math.floor(rand() * 28) + 1;
+    const title = templates.titles[tIdx];
     events.push({
       id: `${year}-${i}`,
+      slug: slugify(title) + `-${i}`,
+      category: catSlug,
+      year,
       image: IMAGES[Math.floor(rand() * IMAGES.length)],
       date: `${String(day).padStart(2, "0")} ${MONTHS[month]}, ${year}`,
-      title: templates.titles[tIdx],
+      title,
       description: templates.descriptions[dIdx],
       likes: Math.floor(rand() * 5000) + 100,
       loves: Math.floor(rand() * 3000) + 50,
@@ -459,6 +493,9 @@ function generateYearEvents(
       ] ?? FEATURED_TEMPLATES["Âm Nhạc"][0];
     featured = {
       id: `${year}-featured`,
+      slug: slugify(ft.title),
+      category: catSlug,
+      year,
       image: IMAGES[Math.floor(rand() * IMAGES.length)],
       date: `Sưu tầm: Lưu trữ ${year}`,
       title: ft.title,
@@ -481,7 +518,7 @@ function buildYearGroups(): YearGroup[] {
   for (let year = 2026; year >= 2000; year--) {
     const catIdx = (2026 - year) % CATEGORIES.length;
     const cat = CATEGORIES[catIdx];
-    const { events, featured } = generateYearEvents(year, cat.vi, rand);
+    const { events, featured } = generateYearEvents(year, cat.vi, cat.en, rand);
     groups.push({
       year,
       category: cat.vi,
@@ -534,3 +571,20 @@ const { rows, yearIndices } = flattenToRows(YEAR_GROUPS);
 
 export const FLATTENED_ROWS: VirtualRow[] = rows;
 export const YEAR_HEADER_INDICES: Map<number, number> = yearIndices;
+
+/* ── Slug → Event lookup (for routing) ── */
+function buildSlugIndex(groups: YearGroup[]): Map<string, EventCardData> {
+  const index = new Map<string, EventCardData>();
+  for (const group of groups) {
+    for (const event of group.events) {
+      index.set(event.slug, event);
+    }
+    if (group.featuredEvent) {
+      index.set(group.featuredEvent.slug, group.featuredEvent);
+    }
+  }
+  return index;
+}
+
+export const EVENT_BY_SLUG: Map<string, EventCardData> =
+  buildSlugIndex(YEAR_GROUPS);

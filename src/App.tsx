@@ -23,6 +23,7 @@ function App() {
             <Route index element={<HomePage />} />
             <Route path=":year" element={<HomePage />} />
             <Route path=":year/:category" element={<HomePage />} />
+            <Route path=":year/:category/:slug" element={<HomePage />} />
           </Route>
         </Routes>
       </BrowserRouter>

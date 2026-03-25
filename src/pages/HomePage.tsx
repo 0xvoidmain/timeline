@@ -1,13 +1,17 @@
 /* HomePage — Virtual-scrolling archive page grouped by year (2026 → 2000) */
 
-import { useParams, useNavigate, useSearchParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import { useRef, useEffect, useCallback } from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { EventCard } from "../components/EventCard";
 import { EventCardWide } from "../components/EventCardWide";
 import { FloatingActionButton } from "../components/FloatingActionButton";
 import { EventDetailModal } from "../components/EventDetailModal";
-import { FLATTENED_ROWS, YEAR_HEADER_INDICES } from "../data/dummyEvents";
+import {
+  FLATTENED_ROWS,
+  YEAR_HEADER_INDICES,
+  EVENT_BY_SLUG,
+} from "../data/dummyEvents";
 import type { VirtualRow } from "../data/dummyEvents";
 
 const DEFAULT_YEAR = 2026;
@@ -28,13 +32,16 @@ function estimateRowSize(index: number): number {
 }
 
 export function HomePage() {
-  const { year: yearParam, category: categoryParam } = useParams();
+  const {
+    year: yearParam,
+    category: categoryParam,
+    slug: slugParam,
+  } = useParams();
   const navigate = useNavigate();
-  const [searchParams, setSearchParams] = useSearchParams();
 
   const activeYear = Number(yearParam) || DEFAULT_YEAR;
   const category = categoryParam || DEFAULT_CATEGORY;
-  const activeEventId = searchParams.get("event");
+  const activeEvent = slugParam ? EVENT_BY_SLUG.get(slugParam) : undefined;
 
   /** Track whether last year change came from page scroll */
   const scrollCausedNav = useRef(false);
@@ -54,16 +61,9 @@ export function HomePage() {
     [navigate, category],
   );
 
-  const openEvent = (id: string) =>
-    setSearchParams((prev) => {
-      prev.set("event", id);
-      return prev;
-    });
-  const closeEvent = () =>
-    setSearchParams((prev) => {
-      prev.delete("event");
-      return prev;
-    });
+  const openEvent = (event: { year: number; category: string; slug: string }) =>
+    navigate(`/${event.year}/${event.category}/${event.slug}`);
+  const closeEvent = () => navigate(`/${activeYear}/${category}`);
 
   /* ── Scroll container ref ── */
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -199,7 +199,7 @@ export function HomePage() {
               <EventCard
                 key={event.id}
                 event={event}
-                onClick={() => openEvent(event.id)}
+                onClick={() => openEvent(event)}
               />
             ))}
           </div>
@@ -210,7 +210,7 @@ export function HomePage() {
             <EventCardWide
               event={row.event}
               className="lg:col-span-2"
-              onClick={() => openEvent(row.event.id)}
+              onClick={() => openEvent(row.event)}
             />
           </div>
         );
@@ -224,7 +224,7 @@ export function HomePage() {
       <div
         ref={scrollRef}
         onScroll={onScroll}
-        className="ml-0 md:ml-56 pt-16 h-screen overflow-y-auto"
+        className="ml-0 md:ml-56 pt-16 h-screen overflow-y-auto scrollbar-line"
       >
         <div
           className="max-w-7xl mx-auto px-8 pb-12 relative"
@@ -251,9 +251,9 @@ export function HomePage() {
         <FloatingActionButton />
       </div>
 
-      {/* Event detail modal — driven by ?event=ID search param */}
-      {activeEventId && (
-        <EventDetailModal eventId={activeEventId} onClose={closeEvent} />
+      {/* Event detail modal — driven by /:year/:category/:slug route */}
+      {activeEvent && (
+        <EventDetailModal eventId={activeEvent.id} onClose={closeEvent} />
       )}
     </>
   );

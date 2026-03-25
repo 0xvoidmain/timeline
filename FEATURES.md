@@ -85,6 +85,14 @@ Tracking all features for the Timeline world event app. Updated after each featu
 - **Status**: Implemented
 - **Key Files**: `src/components/EventDetailModal.tsx`, `src/components/EventDetailHeader.tsx`, `src/components/MediaPlayer.tsx`, `src/components/StatsCard.tsx`, `src/components/QuoteCard.tsx`, `src/components/ContentSection.tsx`, `src/components/ReactionBar.tsx`, `src/components/CommentCard.tsx`, `src/data/dummyEventDetails.ts`, `src/components/EventCard.tsx`, `src/components/EventCardWide.tsx`, `src/pages/HomePage.tsx`
 - **Date**: 2026-03-25
+- **Note**: Routing changed from `?event=ID` to `/:year/:category/:slug` by Event Detail Slug Routing (2026-03-25)
+
+### Event Detail Slug Routing
+
+- **Description**: Event detail popup opens via clean URL route `/:year/:category/:slug` instead of `?event=ID` search params; slugs are auto-generated from event titles using a `slugify()` helper that strips diacritics, lowercases, and replaces non-alphanumeric characters with hyphens
+- **Status**: Implemented
+- **Key Files**: `src/App.tsx`, `src/pages/HomePage.tsx`, `src/components/EventCard.tsx`, `src/components/EventCardWide.tsx`, `src/data/dummyEvents.ts`
+- **Date**: 2026-03-25
 
 ### Event Card — Glassmorphism Redesign
 

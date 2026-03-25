@@ -5,6 +5,9 @@ import { EngagementBar } from "./EngagementBar";
 
 export interface EventCardData {
   id: string;
+  slug: string;
+  category: string;
+  year: number;
   image: string;
   date: string;
   title: string;
