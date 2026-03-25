@@ -31,14 +31,6 @@ export function TimelineNav() {
   const controlledYear = Number(yearParam) || DEFAULT_YEAR;
   const category = categoryParam || DEFAULT_CATEGORY;
 
-  const onYearClick = useCallback(
-    (year: number) => {
-      const search = window.location.search;
-      navigate(`/${year}/${category}${search}`);
-    },
-    [navigate, category],
-  );
-
   const [scrollOffset, setScrollOffset] = useState(0);
   const offsetRef = useRef(0);
   const hasMountAnimated = useRef(false);
@@ -67,8 +59,8 @@ export function TimelineNav() {
   /** Suppress onYearClick during external (controlled) updates */
   const isExternalUpdate = useRef(false);
 
-  /** Snap to nearest item — silent (no callback) */
-  const snapToSilent = useCallback(
+  /** Snap to nearest item */
+  const snapTo = useCallback(
     (offset: number) => {
       const idx = Math.round(clamp(offset) / ITEM_HEIGHT);
       const snapped = idx * ITEM_HEIGHT;
@@ -78,33 +70,17 @@ export function TimelineNav() {
     [maxOffset],
   );
 
-  /** Snap to nearest item */
-  const snapTo = useCallback(
-    (offset: number) => {
-      const idx = Math.round(clamp(offset) / ITEM_HEIGHT);
-      const snapped = idx * ITEM_HEIGHT;
-      offsetRef.current = snapped;
-      setScrollOffset(snapped);
-      const year = YEAR_MARKERS[idx];
-      if (year !== undefined && !isExternalUpdate.current) {
-        onYearClick(year);
-      }
-    },
-    [onYearClick, maxOffset],
-  );
-
   /** Animate to target offset with spring-like easing */
   const animateTo = useCallback(
     (target: number, silent = false) => {
       cancelAnimationFrame(momentumFrame.current);
       const snappedTarget =
         Math.round(clamp(target) / ITEM_HEIGHT) * ITEM_HEIGHT;
-      const doSnap = silent ? snapToSilent : snapTo;
       const animate = () => {
         const current = offsetRef.current;
         const diff = snappedTarget - current;
         if (Math.abs(diff) < 0.5) {
-          doSnap(snappedTarget);
+          snapTo(snappedTarget);
           if (silent) isExternalUpdate.current = false;
           return;
         }
@@ -115,7 +91,7 @@ export function TimelineNav() {
       };
       animate();
     },
-    [snapTo, snapToSilent, maxOffset],
+    [snapTo, maxOffset],
   );
 
   /** On mount, animate from default year (2026) to the route year */
@@ -139,9 +115,24 @@ export function TimelineNav() {
     if (idx < 0) return;
     const targetOffset = idx * ITEM_HEIGHT;
     if (Math.abs(offsetRef.current - targetOffset) < ITEM_HEIGHT * 0.5) return;
+    lastNavigatedYear.current = controlledYear;
     isExternalUpdate.current = true;
     animateTo(targetOffset, true);
   }, [controlledYear, animateTo]);
+
+  /** Navigate when the center year changes (covers drag, wheel, and momentum) */
+  const activeIdx = Math.round(clamp(scrollOffset) / ITEM_HEIGHT);
+  const activeYear = YEAR_MARKERS[activeIdx];
+  const lastNavigatedYear = useRef(controlledYear);
+
+  useEffect(() => {
+    if (isExternalUpdate.current) return;
+    if (activeYear === undefined || activeYear === lastNavigatedYear.current)
+      return;
+    lastNavigatedYear.current = activeYear;
+    const search = window.location.search;
+    navigate(`/${activeYear}/${category}${search}`, { replace: true });
+  }, [activeYear, navigate, category]);
 
   /** Measure container height and track resizes */
   useEffect(() => {
