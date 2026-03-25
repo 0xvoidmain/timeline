@@ -2,47 +2,60 @@
 
 import { VerificationBadge } from "./VerificationBadge";
 import { EngagementBar } from "./EngagementBar";
+import type { TimelineEvent } from "../types";
 
-export interface EventCardData {
-  id: string;
-  slug: string;
-  category: string;
-  year: number;
-  image: string;
-  date: string;
-  title: string;
-  description: string;
-  likes: number;
-  loves: number;
-  sads?: number;
-  comments: number;
-  status: "verified" | "pending";
-  aspectRatio?: string;
+function getReactionCount(event: TimelineEvent, type: string): number {
+  return event.reactionCounts?.find((r) => r.type === type)?.count ?? 0;
+}
+
+function formatDate(dateStr: string): string {
+  const d = new Date(dateStr);
+  const day = String(d.getDate()).padStart(2, "0");
+  const months = [
+    "Tháng 1",
+    "Tháng 2",
+    "Tháng 3",
+    "Tháng 4",
+    "Tháng 5",
+    "Tháng 6",
+    "Tháng 7",
+    "Tháng 8",
+    "Tháng 9",
+    "Tháng 10",
+    "Tháng 11",
+    "Tháng 12",
+  ];
+  const month = months[d.getMonth()];
+  return `${day} ${month}, ${d.getFullYear()}`;
 }
 
 interface EventCardProps {
-  event: EventCardData;
+  event: TimelineEvent;
   className?: string;
   onClick?: () => void;
 }
 
 export function EventCard({ event, className = "", onClick }: EventCardProps) {
-  const aspect = event.aspectRatio ?? "aspect-video";
-
   return (
     <div
       className={`glass-card rounded-xl overflow-hidden flex flex-col group border border-outline-variant/10 ${onClick ? "cursor-pointer" : ""} ${className}`}
       onClick={onClick}
     >
       {/* Image with gradient overlay + verification badge */}
-      <div className={`relative ${aspect} overflow-hidden`}>
-        <img
-          src={event.image}
-          alt={event.title}
-          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-        />
+      <div className="relative aspect-video overflow-hidden">
+        {event.image ? (
+          <img
+            src={event.image}
+            alt={event.title}
+            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+          />
+        ) : (
+          <div className="w-full h-full bg-surface-container-high" />
+        )}
         <div className="absolute inset-0 bg-gradient-to-t from-surface-container-lowest to-transparent opacity-60" />
-        <VerificationBadge status={event.status} />
+        <VerificationBadge
+          status={event.status === "verified" ? "verified" : "pending"}
+        />
       </div>
 
       {/* Content */}
@@ -50,7 +63,7 @@ export function EventCard({ event, className = "", onClick }: EventCardProps) {
         {/* Date label — Inter, uppercase, small */}
         <div className="flex items-center gap-3 mb-3">
           <span className="font-label text-[10px] uppercase tracking-widest text-primary-fixed-dim">
-            {event.date}
+            {formatDate(event.date)}
           </span>
         </div>
 
@@ -60,16 +73,16 @@ export function EventCard({ event, className = "", onClick }: EventCardProps) {
         </h3>
 
         {/* Description — Inter body */}
-        <p className="text-on-surface-variant text-sm leading-relaxed mb-6 opacity-80">
+        <p className="text-on-surface-variant text-sm leading-relaxed mb-6 opacity-80 line-clamp-3">
           {event.description}
         </p>
 
         {/* Reactions + comments */}
         <EngagementBar
-          likes={event.likes}
-          loves={event.loves}
-          sads={event.sads}
-          comments={event.comments}
+          likes={getReactionCount(event, "like")}
+          loves={getReactionCount(event, "love")}
+          sads={getReactionCount(event, "sad") || undefined}
+          comments={event.commentCount}
         />
       </div>
     </div>

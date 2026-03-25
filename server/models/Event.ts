@@ -101,6 +101,7 @@ eventSchema.index({ date: -1 });
 eventSchema.index({ category: 1, country: 1 });
 eventSchema.index({ score: -1 });
 eventSchema.index({ "contributors.user": 1 });
+eventSchema.index({ title: "text", description: "text" });
 
 export type IEvent = InferSchemaType<typeof eventSchema> & {
   _id: mongoose.Types.ObjectId;

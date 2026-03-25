@@ -60,6 +60,8 @@ export const eventRoutes = {
       const {
         category,
         country,
+        year,
+        search,
         from,
         to,
         visibility,
@@ -75,16 +77,33 @@ export const eventRoutes = {
       if (status) filter.status = status;
       if (visibility) filter.visibility = visibility;
       else filter.visibility = { $in: ["public", "anonymous"] };
-      if (from || to) {
+
+      // Year filter: match events whose date falls within the year
+      if (year) {
+        filter.date = {
+          $gte: new Date(`${year}-01-01T00:00:00.000Z`),
+          $lte: new Date(`${year}-12-31T23:59:59.999Z`),
+        };
+      } else if (from || to) {
         filter.date = {};
         if (from)
           (filter.date as Record<string, unknown>).$gte = new Date(from);
         if (to) (filter.date as Record<string, unknown>).$lte = new Date(to);
       }
 
+      // Full-text search
+      if (search) {
+        filter.$text = { $search: search };
+      }
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const sortOption: any = search
+        ? { score: { $meta: "textScore" }, date: -1 }
+        : { date: -1 };
+
       const [events, total] = await Promise.all([
         Event.find(filter)
-          .sort({ date: -1 })
+          .sort(sortOption)
           .skip((page - 1) * limit)
           .limit(limit)
           .populate("createdBy", "name avatar")

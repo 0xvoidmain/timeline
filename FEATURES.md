@@ -254,6 +254,59 @@ Tracking all features for the Timeline world event app. Updated after each featu
 - **Key Files**: `server/models/YearStat.ts`, `server/routes/years.ts`, `src/services/api.ts`
 - **Date**: 2026-03-25
 
+### Database Seed Script
+
+- **Description**: Seed script populates categories (10 Vietnamese categories with icons and colors), reaction types, sample events across years 2000–2026 (4–8 per year), year stats, and category event counts; run with `bun run server/scripts/seed.ts`
+- **Status**: Implemented
+- **Key Files**: `server/scripts/seed.ts`
+- **Date**: 2026-03-25
+
+### Dynamic Category Navigation
+
+- **Description**: Navbar loads categories from the database via `api.listCategories()` instead of hardcoded list; "Tất cả" (All) is always first; selecting a category navigates to `/:year/:category` route
+- **Status**: Implemented
+- **Key Files**: `src/components/Navbar.tsx`, `src/services/api.ts`
+- **Date**: 2026-03-25
+- **Note**: Replaces the hardcoded CATEGORIES array in Navbar
+
+### API-Driven Event Loading
+
+- **Description**: HomePage loads events from `api.listEvents()` with year, category, search, and status filters; events are grouped by year descending with the highest-scored event shown as featured (EventCardWide); supports infinite scroll pagination (30 events per page) via IntersectionObserver; removed @tanstack/react-virtual dependency
+- **Status**: Implemented
+- **Key Files**: `src/pages/HomePage.tsx`, `src/components/EventCard.tsx`, `src/components/EventCardWide.tsx`, `src/services/api.ts`
+- **Date**: 2026-03-25
+- **Note**: Replaces Virtual Scrolling Year Timeline with API-driven pagination
+
+### Full-Text Search
+
+- **Description**: Backend supports `$text` search on event title and description fields via MongoDB text index; search query parameter added to listQuerySchema; SearchInput component debounces input (400ms) and dispatches `timeline:search` CustomEvent; HomePage listens for search events and filters results; search indicator with clear button shown when active
+- **Status**: Implemented
+- **Key Files**: `server/models/Event.ts`, `server/routes/events.ts`, `shared/schemas.ts`, `src/components/SearchInput.tsx`, `src/pages/HomePage.tsx`
+- **Date**: 2026-03-25
+
+### Google Login UI
+
+- **Description**: Navbar shows Google login button (with SVG logo) when not authenticated, redirects to `/api/auth/google`; when logged in, shows user avatar and "Đăng xuất" (logout) button; uses `useAuth()` context for auth state
+- **Status**: Implemented
+- **Key Files**: `src/components/Navbar.tsx`, `src/context/AuthContext.tsx`
+- **Date**: 2026-03-25
+
+### Contribute Memory Modal (Đóng góp ký ức)
+
+- **Description**: Full-screen modal form for authenticated users to submit events; includes title, description, date, category (loaded from DB), image URL, and source URL fields; requires auth (shows login prompt if not logged in); dispatched via `timeline:contribute` CustomEvent from Navbar CTA button and FloatingActionButton; shows success state after submission
+- **Status**: Implemented
+- **Key Files**: `src/components/ContributeModal.tsx`, `src/components/FloatingActionButton.tsx`, `src/pages/HomePage.tsx`, `src/components/Navbar.tsx`
+- **Date**: 2026-03-25
+- **Note**: Replaces planned "Add Event Form" feature
+
+### API-Driven Event Detail Modal
+
+- **Description**: EventDetailModal loads event data from `api.getEvent()` and comments from `api.listComments()` instead of dummy data; shows hero image, stats (views, comments, version), sources list, reactions, and comments with relative timestamps; loading spinner and error/not-found states
+- **Status**: Implemented
+- **Key Files**: `src/components/EventDetailModal.tsx`, `src/services/api.ts`
+- **Date**: 2026-03-25
+- **Note**: Replaces dummy data import from dummyEventDetails.ts
+
 ---
 
 ## In Progress
@@ -263,21 +316,6 @@ _No features currently in progress._
 ---
 
 ## Planned
-
-### Event Filtering UI
-
-- **Description**: Filter events by category, country, and date range from the frontend
-- **Status**: Planned
-- **Key Files**: TBD
-- **Date**: —
-- **Note**: Category filtering partially covered by Path-based Routing
-
-### Add Event Form
-
-- **Description**: Authenticated users can submit new events via a form with validation
-- **Status**: Planned
-- **Key Files**: TBD
-- **Date**: —
 
 ### Wikipedia/Media Import
 

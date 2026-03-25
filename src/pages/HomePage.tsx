@@ -1,34 +1,33 @@
-/* HomePage — Virtual-scrolling archive page grouped by year (2026 → 2000) */
+/* HomePage — Archive page that loads events from the API, grouped by year */
 
 import { useParams, useNavigate } from "react-router-dom";
-import { useRef, useEffect, useCallback } from "react";
-import { useVirtualizer } from "@tanstack/react-virtual";
+import { useState, useEffect, useCallback, useRef } from "react";
+import { api } from "../services/api";
 import { EventCard } from "../components/EventCard";
 import { EventCardWide } from "../components/EventCardWide";
 import { FloatingActionButton } from "../components/FloatingActionButton";
 import { EventDetailModal } from "../components/EventDetailModal";
-import {
-  FLATTENED_ROWS,
-  YEAR_HEADER_INDICES,
-  EVENT_BY_SLUG,
-} from "../data/dummyEvents";
-import type { VirtualRow } from "../data/dummyEvents";
+import { ContributeModal } from "../components/ContributeModal";
+import type { TimelineEvent, Category } from "../types";
 
 const DEFAULT_YEAR = 2026;
 const DEFAULT_CATEGORY = "all";
+const PAGE_SIZE = 30;
 
-/* Row height estimates for the virtualizer */
-function estimateRowSize(index: number): number {
-  const row = FLATTENED_ROWS[index];
-  if (!row) return 100;
-  switch (row.type) {
-    case "year-header":
-      return 120;
-    case "event-row":
-      return 480;
-    case "featured":
-      return 340;
+/** Group events by year descending, picking the highest-scored as featured */
+function groupByYear(events: TimelineEvent[]) {
+  const map = new Map<number, TimelineEvent[]>();
+  for (const ev of events) {
+    const y = new Date(ev.date).getFullYear();
+    if (!map.has(y)) map.set(y, []);
+    map.get(y)!.push(ev);
   }
+  return [...map.entries()]
+    .sort(([a], [b]) => b - a)
+    .map(([year, evts]) => {
+      evts.sort((a, b) => b.score - a.score);
+      return { year, featured: evts[0], rest: evts.slice(1) };
+    });
 }
 
 export function HomePage() {
@@ -40,220 +39,238 @@ export function HomePage() {
   const navigate = useNavigate();
 
   const activeYear = Number(yearParam) || DEFAULT_YEAR;
-  const category = categoryParam || DEFAULT_CATEGORY;
-  const activeEvent = slugParam ? EVENT_BY_SLUG.get(slugParam) : undefined;
+  const categorySlug = categoryParam || DEFAULT_CATEGORY;
 
-  /** Track whether last year change came from page scroll */
-  const scrollCausedNav = useRef(false);
-  const scrollNavTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
+  /* Data states */
+  const [events, setEvents] = useState<TimelineEvent[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(true);
+  const [search, setSearch] = useState("");
+  const [showContribute, setShowContribute] = useState(false);
+  const pageRef = useRef(1);
+  const sentinelRef = useRef<HTMLDivElement>(null);
 
-  /** Called by scroll detection — debounced, replaces URL silently */
-  const onScrollYearChange = useCallback(
-    (year: number) => {
-      clearTimeout(scrollNavTimer.current);
-      scrollNavTimer.current = setTimeout(() => {
-        scrollCausedNav.current = true;
-        navigate(`/${year}/${category}${window.location.search}`, {
-          replace: true,
-        });
-      }, 120);
-    },
-    [navigate, category],
-  );
-
-  const openEvent = (event: { year: number; category: string; slug: string }) =>
-    navigate(`/${event.year}/${event.category}/${event.slug}`);
-  const closeEvent = () => navigate(`/${activeYear}/${category}`);
-
-  /* ── Scroll container ref ── */
-  const scrollRef = useRef<HTMLDivElement>(null);
-
-  /* ── Virtualizer ── */
-  const virtualizer = useVirtualizer({
-    count: FLATTENED_ROWS.length,
-    getScrollElement: () => scrollRef.current,
-    estimateSize: estimateRowSize,
-    overscan: 3,
-  });
-
-  /* ── Track which year is visible as user scrolls ── */
-  const lastReportedYear = useRef(activeYear);
-  const isProgrammaticScroll = useRef(false);
-  const scrollTimeoutRef = useRef<ReturnType<typeof setTimeout>>(undefined);
-  const initialScrollDone = useRef(false);
-
-  /** On first render, jump to the year that came from the route */
+  /* Load categories once */
   useEffect(() => {
-    if (initialScrollDone.current) return;
-    initialScrollDone.current = true;
-    const targetIdx = YEAR_HEADER_INDICES.get(activeYear);
-    if (targetIdx === undefined) return;
-    isProgrammaticScroll.current = true;
-    lastReportedYear.current = activeYear;
-    setTimeout(() => {
-      virtualizer.scrollToIndex(targetIdx, { align: "start" });
-      isProgrammaticScroll.current = false;
-    }, 200);
-    // return () => {
-    //   clearTimeout(timer);
-    // };
-  }, [activeYear, virtualizer]);
+    api
+      .listCategories()
+      .then((r) => setCategories(r.categories))
+      .catch(() => {});
+  }, []);
 
-  const detectVisibleYear = useCallback(() => {
-    if (isProgrammaticScroll.current) return;
-
-    const items = virtualizer.getVirtualItems();
-    // Find the first year-header that is at or near the top of the viewport
-    // or the last year-header that is above the current scroll position
-    let currentYear = lastReportedYear.current;
-    const scrollEl = scrollRef.current;
-    if (!scrollEl) return;
-
-    const scrollTop = scrollEl.scrollTop;
-
-    for (const item of items) {
-      const row = FLATTENED_ROWS[item.index];
-      if (row?.type === "year-header") {
-        // If this header is within 200px of scroll top (generous threshold), it's the active year
-        if (item.start <= scrollTop + 200) {
-          currentYear = row.year;
-        }
-      }
-    }
-
-    if (currentYear !== lastReportedYear.current) {
-      lastReportedYear.current = currentYear;
-      onScrollYearChange(currentYear);
-    }
-  }, [virtualizer, onScrollYearChange]);
-
-  /* Debounced scroll → year detection */
-  const onScroll = useCallback(() => {
-    if (isProgrammaticScroll.current) return;
-    clearTimeout(scrollTimeoutRef.current);
-    scrollTimeoutRef.current = setTimeout(detectVisibleYear, 60);
-  }, [detectVisibleYear]);
-
-  /* ── Scroll-to-year when route changes from timeline click ── */
-  const prevYearRef = useRef(activeYear);
+  /* Listen for search events from Navbar */
   useEffect(() => {
-    if (activeYear === prevYearRef.current) return;
-    prevYearRef.current = activeYear;
+    const handler = (e: Event) => {
+      const q = (e as CustomEvent<string>).detail ?? "";
+      setSearch(q);
+    };
+    window.addEventListener("timeline:search", handler);
+    return () => window.removeEventListener("timeline:search", handler);
+  }, []);
 
-    // If the scroll handler caused this navigation, skip scroll-to
-    if (scrollCausedNav.current) {
-      scrollCausedNav.current = false;
-      return;
-    }
+  /* Listen for contribute events */
+  useEffect(() => {
+    const handler = () => setShowContribute(true);
+    window.addEventListener("timeline:contribute", handler);
+    return () => window.removeEventListener("timeline:contribute", handler);
+  }, []);
 
-    const targetIdx = YEAR_HEADER_INDICES.get(activeYear);
-    if (targetIdx === undefined) return;
-    isProgrammaticScroll.current = true;
-    lastReportedYear.current = activeYear;
-    virtualizer.scrollToIndex(targetIdx, {
-      align: "start",
-      behavior: "smooth",
-    });
-    const timer = setTimeout(() => {
-      isProgrammaticScroll.current = false;
-    }, 800);
-    return () => clearTimeout(timer);
-  }, [activeYear, virtualizer]);
+  /* Fetch events when filters change */
+  useEffect(() => {
+    setLoading(true);
+    pageRef.current = 1;
+    setHasMore(true);
 
-  /* ── Render a single virtual row ── */
-  const renderRow = (row: VirtualRow, index: number) => {
-    switch (row.type) {
-      case "year-header":
-        return (
-          <header
-            key={`yh-${row.year}`}
-            className="mt-40 pt-20 pb-8 first:mt-0"
-          >
-            {/* Gradient separator line between year sections */}
-            {index > 0 && (
-              <div className="h-px mb-20 bg-gradient-to-r from-transparent via-primary/40 to-transparent" />
-            )}
-            <div className="flex items-baseline gap-4">
-              <h1 className="font-headline text-5xl font-bold text-on-surface m-0">
-                {row.year}
-              </h1>
-              <span className="font-headline text-3xl font-normal text-on-surface/40 m-0">
-                /
-              </span>
-              <span className="font-headline text-3xl font-normal text-primary m-0">
-                {row.category}
-              </span>
-            </div>
-            <span className="font-label text-xs uppercase tracking-[0.2em] text-on-surface-variant mt-2 block">
-              The Archive / {row.categoryEn}
-            </span>
-          </header>
-        );
-      case "event-row":
-        return (
-          <div
-            key={`er-${index}`}
-            className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 items-start pb-8"
-          >
-            {row.events.map((event) => (
-              <EventCard
-                key={event.id}
-                event={event}
-                onClick={() => openEvent(event)}
-              />
-            ))}
-          </div>
-        );
-      case "featured":
-        return (
-          <div key={`ft-${row.event.id}`} className="pb-8">
-            <EventCardWide
-              event={row.event}
-              className="lg:col-span-2"
-              onClick={() => openEvent(row.event)}
-            />
-          </div>
-        );
-    }
+    const filters: Record<string, unknown> = {
+      status: "verified",
+      page: 1,
+      limit: PAGE_SIZE,
+    };
+    if (categorySlug !== "all") filters.category = categorySlug;
+    if (activeYear) filters.year = activeYear;
+    if (search) filters.search = search;
+
+    api
+      .listEvents(filters as Parameters<typeof api.listEvents>[0])
+      .then((res) => {
+        setEvents(res.data);
+        setHasMore(res.data.length >= PAGE_SIZE);
+      })
+      .catch(() => setEvents([]))
+      .finally(() => setLoading(false));
+  }, [activeYear, categorySlug, search]);
+
+  /* Load more (infinite scroll) */
+  const loadMore = useCallback(() => {
+    if (loadingMore || !hasMore) return;
+    setLoadingMore(true);
+    const nextPage = pageRef.current + 1;
+
+    const filters: Record<string, unknown> = {
+      status: "verified",
+      page: nextPage,
+      limit: PAGE_SIZE,
+    };
+    if (categorySlug !== "all") filters.category = categorySlug;
+    if (activeYear) filters.year = activeYear;
+    if (search) filters.search = search;
+
+    api
+      .listEvents(filters as Parameters<typeof api.listEvents>[0])
+      .then((res) => {
+        pageRef.current = nextPage;
+        setEvents((prev) => [...prev, ...res.data]);
+        setHasMore(res.data.length >= PAGE_SIZE);
+      })
+      .catch(() => {})
+      .finally(() => setLoadingMore(false));
+  }, [loadingMore, hasMore, categorySlug, activeYear, search]);
+
+  /* Intersection observer for infinite scroll */
+  useEffect(() => {
+    const el = sentinelRef.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) loadMore();
+      },
+      { rootMargin: "400px" },
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [loadMore]);
+
+  /* Category name helper */
+  const getCategoryName = (slug: string) =>
+    categories.find((c) => c.slug === slug)?.name ?? slug;
+
+  /* Navigation helpers */
+  const openEvent = (ev: TimelineEvent) => {
+    const y = new Date(ev.date).getFullYear();
+    navigate(`/${y}/${ev.category}/${ev.slug}`);
   };
+  const closeEvent = () => navigate(`/${activeYear}/${categorySlug}`);
 
-  const virtualItems = virtualizer.getVirtualItems();
+  const groups = groupByYear(events);
 
   return (
     <>
-      <div
-        ref={scrollRef}
-        onScroll={onScroll}
-        className="ml-0 md:ml-56 pt-16 h-screen overflow-y-auto scrollbar-line"
-      >
-        <div
-          className="max-w-7xl mx-auto px-8 pb-12 relative"
-          style={{ height: virtualizer.getTotalSize() }}
-        >
-          {virtualItems.map((virtualRow) => {
-            const row = FLATTENED_ROWS[virtualRow.index];
-            return (
-              <div
-                key={virtualRow.key}
-                data-index={virtualRow.index}
-                ref={virtualizer.measureElement}
-                className="absolute left-8 right-8"
-                style={{
-                  transform: `translateY(${virtualRow.start}px)`,
+      <div className="ml-0 md:ml-56 pt-16 h-screen overflow-y-auto scrollbar-line">
+        <div className="max-w-7xl mx-auto px-8 pb-12">
+          {/* Search indicator */}
+          {search && (
+            <div className="flex items-center gap-3 mt-8 mb-4">
+              <span className="text-on-surface-variant text-sm">
+                Kết quả cho &quot;{search}&quot;
+              </span>
+              <button
+                onClick={() => {
+                  setSearch("");
+                  window.dispatchEvent(
+                    new CustomEvent("timeline:search-clear"),
+                  );
                 }}
+                className="text-primary text-xs font-label uppercase tracking-widest hover:underline"
               >
-                {renderRow(row, virtualRow.index)}
-              </div>
-            );
-          })}
+                Xóa
+              </button>
+            </div>
+          )}
+
+          {/* Loading spinner */}
+          {loading && (
+            <div className="flex justify-center items-center py-40">
+              <div className="w-10 h-10 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+            </div>
+          )}
+
+          {/* Empty state */}
+          {!loading && events.length === 0 && (
+            <div className="flex flex-col items-center justify-center py-40 text-center">
+              <span className="material-symbols-outlined text-5xl text-on-surface-variant/30 mb-6">
+                search_off
+              </span>
+              <p className="text-on-surface-variant text-lg">
+                Không tìm thấy sự kiện nào
+              </p>
+            </div>
+          )}
+
+          {/* Event groups by year */}
+          {!loading &&
+            groups.map((group, gi) => (
+              <section key={group.year}>
+                {/* Year header */}
+                <header className={`${gi > 0 ? "mt-40" : "mt-12"} pt-20 pb-8`}>
+                  {gi > 0 && (
+                    <div className="h-px mb-20 bg-gradient-to-r from-transparent via-primary/40 to-transparent" />
+                  )}
+                  <div className="flex items-baseline gap-4">
+                    <h1 className="font-headline text-5xl font-bold text-on-surface m-0">
+                      {group.year}
+                    </h1>
+                    <span className="font-headline text-3xl font-normal text-on-surface/40 m-0">
+                      /
+                    </span>
+                    <span className="font-headline text-3xl font-normal text-primary m-0">
+                      {getCategoryName(
+                        categorySlug === "all"
+                          ? group.featured.category
+                          : categorySlug,
+                      )}
+                    </span>
+                  </div>
+                  <span className="font-label text-xs uppercase tracking-[0.2em] text-on-surface-variant mt-2 block">
+                    The Archive / {group.year}
+                  </span>
+                </header>
+
+                {/* Featured event */}
+                <div className="pb-8">
+                  <EventCardWide
+                    event={group.featured}
+                    className="lg:col-span-2"
+                    onClick={() => openEvent(group.featured)}
+                  />
+                </div>
+
+                {/* Rest of events in grid */}
+                {group.rest.length > 0 && (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 items-start pb-8">
+                    {group.rest.map((ev) => (
+                      <EventCard
+                        key={ev._id}
+                        event={ev}
+                        onClick={() => openEvent(ev)}
+                      />
+                    ))}
+                  </div>
+                )}
+              </section>
+            ))}
+
+          {/* Load more sentinel */}
+          <div ref={sentinelRef} className="h-1" />
+          {loadingMore && (
+            <div className="flex justify-center py-8">
+              <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+            </div>
+          )}
         </div>
 
-        <FloatingActionButton />
+        <FloatingActionButton onContribute={() => setShowContribute(true)} />
       </div>
 
       {/* Event detail modal — driven by /:year/:category/:slug route */}
-      {activeEvent && (
-        <EventDetailModal eventId={activeEvent.id} onClose={closeEvent} />
+      {slugParam && (
+        <EventDetailModal eventId={slugParam} onClose={closeEvent} />
+      )}
+
+      {/* Contribute memory modal */}
+      {showContribute && (
+        <ContributeModal onClose={() => setShowContribute(false)} />
       )}
     </>
   );

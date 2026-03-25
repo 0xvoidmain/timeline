@@ -44,7 +44,7 @@ export const api = {
 
   // ── Events ──
 
-  listEvents: (filters?: EventFilters) => {
+  listEvents: (filters?: EventFilters & { year?: number; search?: string }) => {
     const params = new URLSearchParams();
     if (filters) {
       Object.entries(filters).forEach(([key, val]) => {

@@ -1,10 +1,31 @@
 /* EventCardWide — Horizontal glassmorphism card for featured/documentary content */
 /* Image left (50%), content right (50%) with secondary action button */
 
-import type { EventCardData } from "./EventCard";
+import type { TimelineEvent } from "../types";
+
+function formatDate(dateStr: string): string {
+  const d = new Date(dateStr);
+  const day = String(d.getDate()).padStart(2, "0");
+  const months = [
+    "Tháng 1",
+    "Tháng 2",
+    "Tháng 3",
+    "Tháng 4",
+    "Tháng 5",
+    "Tháng 6",
+    "Tháng 7",
+    "Tháng 8",
+    "Tháng 9",
+    "Tháng 10",
+    "Tháng 11",
+    "Tháng 12",
+  ];
+  const month = months[d.getMonth()];
+  return `${day} ${month}, ${d.getFullYear()}`;
+}
 
 interface EventCardWideProps {
-  event: EventCardData;
+  event: TimelineEvent;
   className?: string;
   onClick?: () => void;
 }
@@ -21,11 +42,15 @@ export function EventCardWide({
     >
       {/* Image half */}
       <div className="relative md:w-1/2 aspect-video md:aspect-auto overflow-hidden">
-        <img
-          src={event.image}
-          alt={event.title}
-          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-        />
+        {event.image ? (
+          <img
+            src={event.image}
+            alt={event.title}
+            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+          />
+        ) : (
+          <div className="w-full h-full bg-surface-container-high" />
+        )}
         <div className="absolute inset-0 bg-primary/5 group-hover:bg-transparent transition-colors" />
       </div>
 
@@ -34,7 +59,7 @@ export function EventCardWide({
         {/* Source label */}
         <div className="flex items-center gap-3 mb-4">
           <span className="font-label text-[10px] uppercase tracking-widest text-primary-fixed-dim">
-            {event.date}
+            {formatDate(event.date)}
           </span>
         </div>
 

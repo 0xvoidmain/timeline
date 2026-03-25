@@ -52,6 +52,8 @@ export const updateEventSchema = createEventSchema.partial();
 export const listQuerySchema = z.object({
   category: z.string().optional(),
   country: z.string().optional(),
+  year: z.coerce.number().int().optional(),
+  search: z.string().max(200).optional(),
   from: z.iso.datetime().optional(),
   to: z.iso.datetime().optional(),
   visibility: z.enum(VISIBILITY).optional(),
