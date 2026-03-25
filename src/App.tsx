@@ -1,14 +1,12 @@
 import { BrowserRouter, Routes, Route, Outlet } from "react-router-dom";
 import { AuthProvider } from "./context/AuthContext";
 import { Navbar } from "./components/Navbar";
-import { TimelineNav } from "./components/TimelineNav";
 import { HomePage } from "./pages/HomePage";
 
 function AppLayout() {
   return (
     <>
       <Navbar />
-      <TimelineNav />
       <Outlet />
     </>
   );

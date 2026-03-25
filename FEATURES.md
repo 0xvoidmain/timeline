@@ -61,9 +61,9 @@ Tracking all features for the Timeline world event app. Updated after each featu
 
 ### Path-based Routing
 
-- **Description**: Routes support `/` (home), `/:year` (year only), and `/:year/:category` (year + category), all rendering HomePage; App.tsx is a layout shell (Navbar + TimelineNav + Outlet) with no handler logic; TimelineNav reads year from route params and navigates internally; Navbar reads category from route params and navigates internally; HomePage reads year/category from route params and tracks scroll-vs-timeline state internally
+- **Description**: Routes support `/` (home), `/:year` (year only), and `/:year/:category` (year + category), all rendering HomePage; App.tsx is a layout shell (Navbar + Outlet) with no handler logic; Navbar reads category from route params and navigates internally; HomePage reads year/category from route params and tracks scroll state internally
 - **Status**: Implemented
-- **Key Files**: `src/App.tsx`, `src/pages/HomePage.tsx`, `src/components/Navbar.tsx`, `src/components/TimelineNav.tsx`
+- **Key Files**: `src/App.tsx`, `src/pages/HomePage.tsx`, `src/components/Navbar.tsx`
 - **Date**: 2026-03-25
 - **Note**: Replaces URL Search Params Sync. Updated 2026-03-25: simplified to three catch-all routes; moved all param reading into child components; App.tsx reduced to layout shell with Outlet
 
@@ -121,7 +121,7 @@ Tracking all features for the Timeline world event app. Updated after each featu
 
 - **Description**: Fully redesigned homepage with Nostalgic-Digital aesthetic featuring a masonry-like 3-column event card grid, glassmorphism cards, dummy data for visual preview, and responsive layout that collapses to single column on mobile
 - **Status**: Implemented
-- **Key Files**: `src/pages/HomePage.tsx`, `src/components/EventCard.tsx`, `src/components/EventCardWide.tsx`, `src/components/Navbar.tsx`, `src/components/TimelineNav.tsx`, `src/App.tsx`
+- **Key Files**: `src/pages/HomePage.tsx`, `src/components/EventCard.tsx`, `src/components/EventCardWide.tsx`, `src/components/Navbar.tsx`, `src/App.tsx`
 - **Date**: 2026-03-25
 - **Note**: HomePage rewritten with virtual scrolling year sections (2026-03-25)
 
@@ -141,19 +141,11 @@ Tracking all features for the Timeline world event app. Updated after each featu
 - **Date**: 2026-03-25
 - **Note**: Updated 2026-03-25: expanded with 10+ new interfaces, new Zod schemas, and new constants
 
-### Timeline Navigation
-
-- **Description**: Full fixed left sidebar with scrollable vertical timeline spanning 3000 BCE to 2026; generates year markers at varying density, gold connector line, active-state glow, and auto-scrolls active year into view on mount
-- **Status**: Implemented
-- **Key Files**: `src/components/TimelineNav.tsx`, `src/App.tsx`, `src/pages/HomePage.tsx`
-- **Date**: 2026-03-25
-- **Note**: Merged Sidebar shell into TimelineNav (2026-03-25); removed zoom slider, settings/help footer, and era header. Updated with controlled year sync for bidirectional scroll↔nav linking (2026-03-25)
-
 ### Virtual Scrolling Year Timeline
 
-- **Description**: Events grouped by year (2026→2000) with continuous vertical scrolling, virtualized rendering via @tanstack/react-virtual, bidirectional sync between scroll position and TimelineNav active year
+- **Description**: Events grouped by year (2026→2000) with continuous vertical scrolling, virtualized rendering via @tanstack/react-virtual, bidirectional sync between scroll position and active year
 - **Status**: Implemented
-- **Key Files**: `src/data/dummyEvents.ts`, `src/pages/HomePage.tsx`, `src/components/TimelineNav.tsx`, `src/App.tsx`, `package.json`
+- **Key Files**: `src/data/dummyEvents.ts`, `src/pages/HomePage.tsx`, `src/App.tsx`, `package.json`
 - **Date**: 2026-03-25
 
 ### Verification Badge
@@ -310,7 +302,7 @@ Tracking all features for the Timeline world event app. Updated after each featu
 
 ### Multi-Year Infinite Scroll
 
-- **Description**: HomePage loads events spanning a 5-year window (center year ± 2) on initial load using `from`/`to` date range params instead of a single `year` filter; scrolling down extends the window backwards by 2 years at a time with sentinel-based IntersectionObserver (600px rootMargin) for seamless pre-fetching; events grouped by year with section headers; enhanced with scroll-driven route sync (IntersectionObserver on year sections updates route/TimelineNav as user scrolls), smart data caching (navigating to an already-loaded year scrolls to its section; navigating outside the loaded range fetches only the missing segment and merges), and auto-scroll on route load (deep-linking to e.g. `/2019` loads the year window and scrolls to the target section after render)
+- **Description**: HomePage loads events spanning a 5-year window (center year ± 2) on initial load using `from`/`to` date range params instead of a single `year` filter; scrolling down extends the window backwards by 2 years at a time with sentinel-based IntersectionObserver (600px rootMargin) for seamless pre-fetching; events grouped by year with section headers; enhanced with scroll-driven route sync (IntersectionObserver on year sections updates route as user scrolls), smart data caching (navigating to an already-loaded year scrolls to its section; navigating outside the loaded range fetches only the missing segment and merges), and auto-scroll on route load (deep-linking to e.g. `/2019` loads the year window and scrolls to the target section after render)
 - **Status**: Implemented
 - **Key Files**: `src/pages/HomePage.tsx`
 - **Date**: 2026-03-25
@@ -348,7 +340,7 @@ _No features currently in progress._
 
 - **Description**: Year and category state sync to browser URL as `?year=XXXX&category=slug` search params; state initializes from URL on page load; Navbar category links act as toggle buttons (re-clicking deselects); existing `?event=ID` param is preserved across changes
 - **Status**: Removed
-- **Key Files**: `src/App.tsx`, `src/pages/HomePage.tsx`, `src/components/Navbar.tsx`, `src/components/TimelineNav.tsx`
+- **Key Files**: `src/App.tsx`, `src/pages/HomePage.tsx`, `src/components/Navbar.tsx`
 - **Date**: 2026-03-25
 - **Note**: Replaced by Path-based Routing (2026-03-25)
 
@@ -358,4 +350,12 @@ _No features currently in progress._
 - **Status**: Removed
 - **Key Files**: `src/components/Sidebar.tsx`
 - **Date**: 2026-03-25
-- **Note**: Shell merged into TimelineNav; zoom slider, settings/help footer, and era header removed
+- **Note**: Shell merged into TimelineNav; zoom slider, settings/help footer, and era header removed. TimelineNav itself fully removed 2026-03-25 (see Timeline Navigation entry)
+
+### Timeline Navigation (3D Barrel Wheel)
+
+- **Description**: Full fixed left sidebar with scrollable vertical timeline spanning 3000 BCE to 2026; generates year markers at varying density, gold connector line, active-state glow, and auto-scrolls active year into view on mount; supports mouse wheel scrolling, 3D barrel wheel rendering, mount animation, and external year sync from URL params; year click navigation via direct onClick handlers on each year marker with a `navigateToIndex` callback
+- **Status**: Removed
+- **Key Files**: `src/components/TimelineNav.tsx`
+- **Date**: 2026-03-25
+- **Note**: Removed 2026-03-25: entire TimelineNav sidebar removed from project — 3D barrel wheel year picker, w-56 fixed sidebar layout, vertical timeline gradient line, active node dot, and `.timeline-line` CSS all deleted. `src/components/TimelineNav.tsx` is a tombstone file pending deletion. TimelineNav import/usage removed from `src/App.tsx`; sidebar offset (`ml-0 md:ml-56`) removed from `src/pages/HomePage.tsx`; `.timeline-line` CSS removed from `src/index.css`

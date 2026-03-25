@@ -77,7 +77,7 @@ export function HomePage() {
   const visibleYearRef = useRef(activeYear);
   /** Pending scroll-to year after data loads */
   const pendingScrollYear = useRef<number | null>(null);
-  /** True when the route change was caused by scrolling (not TimelineNav) */
+  /** True when the route change was caused by scrolling */
   const scrollDrivenNav = useRef(false);
 
   /* Load categories once */
@@ -390,7 +390,7 @@ export function HomePage() {
     <>
       <div
         ref={scrollContainerRef}
-        className="ml-0 md:ml-56 pt-16 h-screen overflow-y-auto scrollbar-line"
+        className="pt-16 h-screen overflow-y-auto scrollbar-line"
       >
         <div className="max-w-7xl mx-auto px-8 pb-12">
           {/* Loading spinner */}
