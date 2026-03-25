@@ -11,7 +11,7 @@ export type {
   EventContributor,
   ReactionCount,
   Category,
-  YearStat,
+  Year,
   Comment,
   Reaction,
   ReactionTypeConfig,

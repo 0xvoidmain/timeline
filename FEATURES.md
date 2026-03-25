@@ -22,7 +22,7 @@ Tracking all features for the Timeline world event app. Updated after each featu
 
 ### Event CRUD API
 
-- **Description**: RESTful API for creating, reading, updating, and deleting timeline events with Zod validation; events support slug, image, eventType, status, sources array, metadata array, period (anniversary), scoring (baseScore/engagementScore/score), versioning (currentVersion), denormalized reactionCounts/commentCount/viewCount, contributors array, and approval fields (approvedBy/approvedAt/reviewNote); POST creates initial EventVersion snapshot and updates Category/YearStat counts; PUT creates version snapshot; DELETE decrements stats; includes GET `/api/events/:id/versions` for version history and POST `/api/events/:id/approve` for moderator/admin approval
+- **Description**: RESTful API for creating, reading, updating, and deleting timeline events with Zod validation; events support slug, image, eventType, status, sources array, metadata array, period (anniversary), scoring (baseScore/engagementScore/score), versioning (currentVersion), denormalized reactionCounts/commentCount/viewCount, contributors array, and approval fields (approvedBy/approvedAt/reviewNote); POST creates initial EventVersion snapshot and updates Category/Year counts; PUT creates version snapshot; DELETE decrements stats; includes GET `/api/events/:id/versions` for version history and POST `/api/events/:id/approve` for moderator/admin approval
 - **Status**: Implemented
 - **Key Files**: `server/routes/events.ts`, `server/models/Event.ts`, `src/services/api.ts`
 - **Date**: 2026-03-25
@@ -135,7 +135,7 @@ Tracking all features for the Timeline world event app. Updated after each featu
 
 ### Shared Types Architecture
 
-- **Description**: Single source of truth for types, Zod schemas, and constants shared between frontend and backend via a `shared/` directory; includes 10+ interfaces (Category, YearStat, Comment, Reaction, ReactionTypeConfig, EventVersion, EventSource, EventMetadata, EventPeriod, EventContributor, ReactionCount), validation schemas (createCommentSchema, createReactionSchema, createCategorySchema, approveEventSchema, createReactionTypeSchema), and constants (EVENT_STATUS, EVENT_TYPE, USER_ROLE, REACTION_TARGET, DEFAULT_REACTION_TYPES)
+- **Description**: Single source of truth for types, Zod schemas, and constants shared between frontend and backend via a `shared/` directory; includes 10+ interfaces (Category, Year, Comment, Reaction, ReactionTypeConfig, EventVersion, EventSource, EventMetadata, EventPeriod, EventContributor, ReactionCount), validation schemas (createCommentSchema, createReactionSchema, createCategorySchema, approveEventSchema, createReactionTypeSchema), and constants (EVENT_STATUS, EVENT_TYPE, USER_ROLE, REACTION_TARGET, DEFAULT_REACTION_TYPES)
 - **Status**: Implemented
 - **Key Files**: `shared/types.ts`, `shared/schemas.ts`, `shared/constants.ts`, `src/types/index.ts`
 - **Date**: 2026-03-25
@@ -185,7 +185,7 @@ Tracking all features for the Timeline world event app. Updated after each featu
 
 ### Database Migration Script
 
-- **Description**: Migration script to upgrade existing data: migrate source/sourceUrl to sources array, generate slugs, set default values for new fields, seed Category/YearStat/ReactionType collections from existing data; run with `bun run server/scripts/migrate-v2.ts`
+- **Description**: Migration script to upgrade existing data: migrate source/sourceUrl to sources array, generate slugs, set default values for new fields, seed Category/Year/ReactionType collections from existing data; run with `bun run server/scripts/migrate-v2.ts`
 - **Status**: Implemented
 - **Key Files**: `server/scripts/migrate-v2.ts`
 - **Date**: 2026-03-25
@@ -240,12 +240,13 @@ Tracking all features for the Timeline world event app. Updated after each featu
 - **Key Files**: `server/models/User.ts`, `server/middleware/auth.ts`, `shared/constants.ts`
 - **Date**: 2026-03-25
 
-### Year Statistics
+### Year Model
 
-- **Description**: YearStat collection tracks event count per year; auto-updated on event create/delete; API endpoint to list years with event counts
+- **Description**: Year collection tracks event count, title, and description per year; auto-updated on event create/delete; API endpoint to list years with event counts; uses Mongoose timestamps
 - **Status**: Implemented
-- **Key Files**: `server/models/YearStat.ts`, `server/routes/years.ts`, `src/services/api.ts`
-- **Date**: 2026-03-25
+- **Key Files**: `server/models/Year.ts`, `server/routes/years.ts`, `src/services/api.ts`, `shared/types.ts`
+- **Date**: 2026-03-26
+- **Note**: Renamed from YearStat to Year on 2026-03-26; added title and description fields; switched to Mongoose timestamps
 
 ### Database Seed Script
 

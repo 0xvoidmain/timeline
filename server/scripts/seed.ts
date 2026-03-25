@@ -8,7 +8,7 @@ import mongoose from "mongoose";
 import { connectDB } from "../config/db.ts";
 import { Category } from "../models/Category.ts";
 import { Event } from "../models/Event.ts";
-import { YearStat } from "../models/YearStat.ts";
+import { Year } from "../models/Year.ts";
 import { ReactionType } from "../models/ReactionType.ts";
 
 await connectDB();
@@ -219,7 +219,7 @@ async function seed() {
   await Promise.all([
     Category.deleteMany({}),
     Event.deleteMany({}),
-    YearStat.deleteMany({}),
+    Year.deleteMany({}),
     ReactionType.deleteMany({}),
   ]);
 
@@ -344,11 +344,11 @@ async function seed() {
 
   // 4. Seed year stats
   console.log("[seed] Creating year stats...");
-  const yearStatDocs = Object.entries(yearCounts).map(([year, count]) => ({
+  const yearDocs = Object.entries(yearCounts).map(([year, count]) => ({
     year: Number(year),
     eventCount: count,
   }));
-  await YearStat.insertMany(yearStatDocs);
+  await Year.insertMany(yearDocs);
 
   // 5. Update category event counts
   console.log("[seed] Updating category counts...");

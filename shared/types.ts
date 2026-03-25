@@ -111,11 +111,13 @@ export interface Category {
   updatedAt: string;
 }
 
-// ── Year stat (API response shape) ──
+// ── Year (API response shape) ──
 
-export interface YearStat {
+export interface Year {
   _id: string;
   year: number;
+  title: string;
+  description: string;
   eventCount: number;
 }
 

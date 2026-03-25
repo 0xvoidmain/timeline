@@ -1,10 +1,10 @@
-import { YearStat } from "../models/YearStat.ts";
+import { Year } from "../models/Year.ts";
 
 export const yearRoutes = {
   "/api/years": {
-    // GET — list year stats with event counts
+    // GET — list years with event counts
     GET: async () => {
-      const years = await YearStat.find({ eventCount: { $gt: 0 } }).sort({
+      const years = await Year.find({ eventCount: { $gt: 0 } }).sort({
         year: -1,
       });
       return Response.json({ years });

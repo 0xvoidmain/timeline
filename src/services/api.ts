@@ -9,7 +9,7 @@ import type {
   Category,
   CreateCategoryInput,
   UpdateCategoryInput,
-  YearStat,
+  Year,
   Comment,
   CreateCommentInput,
   CreateReactionInput,
@@ -111,9 +111,9 @@ export const api = {
       method: "DELETE",
     }),
 
-  // ── Year stats ──
+  // ── Years ──
 
-  listYearStats: () => request<{ years: YearStat[] }>("/years"),
+  listYears: () => request<{ years: Year[] }>("/years"),
 
   // ── Comments ──
 

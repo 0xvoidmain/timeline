@@ -4,7 +4,7 @@
  * - Add default values for new Event fields
  * - Generate slugs for existing events
  * - Seed Category collection from existing event categories
- * - Seed YearStat collection from existing events
+ * - Seed Year collection from existing events
  * - Seed default ReactionType entries
  *
  * Run: bun run server/scripts/migrate-v2.ts
@@ -13,7 +13,7 @@
 import { connectDB } from "../config/db.ts";
 import { Event } from "../models/Event.ts";
 import { Category } from "../models/Category.ts";
-import { YearStat } from "../models/YearStat.ts";
+import { Year } from "../models/Year.ts";
 import { ReactionType } from "../models/ReactionType.ts";
 import { DEFAULT_REACTION_TYPES } from "../../shared/constants.ts";
 
@@ -111,7 +111,7 @@ async function migrate() {
     { $group: { _id: { $year: "$date" }, count: { $sum: 1 } } },
   ]);
   for (const { _id: year, count } of yearAgg) {
-    await YearStat.findOneAndUpdate(
+    await Year.findOneAndUpdate(
       { year },
       { $set: { eventCount: count, updatedAt: new Date() } },
       { upsert: true },

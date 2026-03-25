@@ -2,7 +2,7 @@ import type { BunRequest } from "bun";
 import { Event } from "../models/Event.ts";
 import { EventVersion } from "../models/EventVersion.ts";
 import { Category } from "../models/Category.ts";
-import { YearStat } from "../models/YearStat.ts";
+import { Year } from "../models/Year.ts";
 import { requireAuth, requireRole } from "../middleware/auth.ts";
 import {
   createEventSchema,
@@ -25,9 +25,9 @@ function slugify(text: string): string {
 async function incrementStats(category: string, year: number) {
   await Promise.all([
     Category.findOneAndUpdate({ slug: category }, { $inc: { eventCount: 1 } }),
-    YearStat.findOneAndUpdate(
+    Year.findOneAndUpdate(
       { year },
-      { $inc: { eventCount: 1 }, $set: { updatedAt: new Date() } },
+      { $inc: { eventCount: 1 } },
       { upsert: true },
     ),
   ]);
@@ -36,10 +36,7 @@ async function incrementStats(category: string, year: number) {
 async function decrementStats(category: string, year: number) {
   await Promise.all([
     Category.findOneAndUpdate({ slug: category }, { $inc: { eventCount: -1 } }),
-    YearStat.findOneAndUpdate(
-      { year },
-      { $inc: { eventCount: -1 }, $set: { updatedAt: new Date() } },
-    ),
+    Year.findOneAndUpdate({ year }, { $inc: { eventCount: -1 } }),
   ]);
 }
 
