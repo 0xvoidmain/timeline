@@ -1,6 +1,10 @@
 /* TimelineNav — iOS-style wheel picker for timeline year selection */
 
 import { useState, useRef, useEffect, useCallback } from "react";
+import { useParams, useNavigate } from "react-router-dom";
+
+const DEFAULT_YEAR = 2026;
+const DEFAULT_CATEGORY = "all";
 
 /** Generate year markers at varying density across history */
 function generateYearMarkers(): number[] {
@@ -21,21 +25,27 @@ function formatYear(year: number): string {
 const YEAR_MARKERS = generateYearMarkers();
 const ITEM_HEIGHT = 44;
 
-interface TimelineNavProps {
-  activeYear?: number;
-  onYearClick?: (year: number) => void;
-}
+export function TimelineNav() {
+  const { year: yearParam, category: categoryParam } = useParams();
+  const navigate = useNavigate();
+  const controlledYear = Number(yearParam) || DEFAULT_YEAR;
+  const category = categoryParam || DEFAULT_CATEGORY;
 
-export function TimelineNav({
-  activeYear: controlledYear,
-  onYearClick,
-}: TimelineNavProps) {
-  const [internalYear, setInternalYear] = useState(2026);
-  const activeYear = controlledYear ?? internalYear;
+  const onYearClick = useCallback(
+    (year: number) => {
+      const search = window.location.search;
+      navigate(`/${year}/${category}${search}`);
+    },
+    [navigate, category],
+  );
 
-  /** scrollOffset represents the pixel offset: 0 = first item centered */
+  const [, setInternalYear] = useState(controlledYear);
+
+  /** scrollOffset represents the pixel offset: 0 = first item centered.
+   *  Always start at year 2026 (index 0) — mount animation will scroll to the target year. */
   const [scrollOffset, setScrollOffset] = useState(0);
   const offsetRef = useRef(0);
+  const hasMountAnimated = useRef(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const [wheelHeight, setWheelHeight] = useState(0);
 
@@ -118,19 +128,24 @@ export function TimelineNav({
     [snapTo, snapToSilent, maxOffset],
   );
 
-  /** Initialize to activeYear position */
+  /** On mount, animate from current year (2026) to the route year */
   useEffect(() => {
-    const idx = YEAR_MARKERS.indexOf(activeYear);
-    if (idx >= 0) {
-      const offset = idx * ITEM_HEIGHT;
-      offsetRef.current = offset;
-      setScrollOffset(offset);
-    }
+    if (hasMountAnimated.current) return;
+    hasMountAnimated.current = true;
+    const idx = YEAR_MARKERS.indexOf(controlledYear);
+    if (idx < 0 || controlledYear === DEFAULT_YEAR) return;
+    const targetOffset = idx * ITEM_HEIGHT;
+    // Small delay so the component is rendered before animating
+    const timer = setTimeout(() => {
+      isExternalUpdate.current = true;
+      animateTo(targetOffset, true);
+    }, 3000);
+    return () => clearTimeout(timer);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   /** Sync wheel position when controlledYear changes externally */
   useEffect(() => {
-    if (controlledYear === undefined) return;
+    if (!hasMountAnimated.current) return;
     const idx = YEAR_MARKERS.indexOf(controlledYear);
     if (idx < 0) return;
     const targetOffset = idx * ITEM_HEIGHT;
@@ -232,21 +247,23 @@ export function TimelineNav({
     [animateTo, snapTo],
   );
 
-  /** Mouse wheel support */
-  const onWheel = useCallback(
-    (e: React.WheelEvent) => {
+  /** Mouse wheel support — attached as non-passive to allow preventDefault */
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const handler = (e: WheelEvent) => {
       e.preventDefault();
       const newOffset = clamp(offsetRef.current + e.deltaY);
       offsetRef.current = newOffset;
       setScrollOffset(newOffset);
-      // Debounce snap
       cancelAnimationFrame(momentumFrame.current);
       momentumFrame.current = requestAnimationFrame(() => {
         snapTo(newOffset);
       });
-    },
-    [snapTo, maxOffset],
-  );
+    };
+    el.addEventListener("wheel", handler, { passive: false });
+    return () => el.removeEventListener("wheel", handler);
+  }, [snapTo, maxOffset]);
 
   return (
     <aside className="fixed left-0 top-0 h-full w-56 bg-surface-container-low hidden md:flex flex-col z-40">
@@ -270,7 +287,6 @@ export function TimelineNav({
         onPointerMove={onPointerMove}
         onPointerUp={onPointerUp}
         onPointerCancel={onPointerUp}
-        onWheel={onWheel}
         className="relative flex-1 select-none touch-none overflow-hidden"
         style={{
           perspective: "1000px",

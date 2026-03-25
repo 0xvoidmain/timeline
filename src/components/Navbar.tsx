@@ -1,6 +1,11 @@
 /* Navbar — Fixed top navigation bar with logo, category links, search, and CTA */
 
+import { useParams, useNavigate } from "react-router-dom";
+import { useCallback } from "react";
 import { SearchInput } from "./SearchInput";
+
+const DEFAULT_YEAR = 2026;
+const DEFAULT_CATEGORY = "all";
 
 const CATEGORIES = [
   { label: "Tất cả", slug: "all" },
@@ -11,17 +16,25 @@ const CATEGORIES = [
   { label: "Xu hướng", slug: "trending" },
 ];
 
-interface NavbarProps {
-  activeCategory?: string;
-  onCategoryChange?: (category: string) => void;
-}
+export function Navbar() {
+  const { year: yearParam, category: categoryParam } = useParams();
+  const navigate = useNavigate();
+  const activeYear = Number(yearParam) || DEFAULT_YEAR;
+  const activeCategory = categoryParam || DEFAULT_CATEGORY;
 
-export function Navbar({ activeCategory, onCategoryChange }: NavbarProps) {
+  const handleCategoryChange = useCallback(
+    (slug: string) => {
+      const search = window.location.search;
+      navigate(`/${activeYear}/${slug}${search}`);
+    },
+    [navigate, activeYear],
+  );
+
   return (
     <header className="fixed top-0 w-full z-50 bg-surface/90 backdrop-blur-md flex justify-between items-center px-8 py-4">
       {/* Logo */}
       <div className="font-headline text-2xl font-bold text-primary-container tracking-tight">
-        Ký Ức Việt Nam
+        Việt Nam
       </div>
 
       {/* Category navigation links */}
@@ -30,7 +43,7 @@ export function Navbar({ activeCategory, onCategoryChange }: NavbarProps) {
           <button
             key={cat.slug}
             type="button"
-            onClick={() => onCategoryChange?.(cat.slug)}
+            onClick={() => handleCategoryChange(cat.slug)}
             className={
               cat.slug === activeCategory
                 ? "font-label uppercase tracking-wider text-[12px] text-primary border-b-2 border-primary pb-1"

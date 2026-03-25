@@ -59,11 +59,11 @@ Tracking all features for the Timeline world event app. Updated after each featu
 
 ### Path-based Routing
 
-- **Description**: URL structure uses path segments `/:year/:category` (e.g. `/2026/all`, `/2000/music`) instead of search params; unmatched URLs redirect to `/2026/all`; event detail modal still uses `?event=ID` search params; HomePage scrolls to the correct year section on initial load based on the URL path
+- **Description**: Routes support `/` (home), `/:year` (year only), and `/:year/:category` (year + category), all rendering HomePage; App.tsx is a layout shell (Navbar + TimelineNav + Outlet) with no handler logic; TimelineNav reads year from route params and navigates internally; Navbar reads category from route params and navigates internally; HomePage reads year/category from route params and tracks scroll-vs-timeline state internally
 - **Status**: Implemented
 - **Key Files**: `src/App.tsx`, `src/pages/HomePage.tsx`, `src/components/Navbar.tsx`, `src/components/TimelineNav.tsx`
 - **Date**: 2026-03-25
-- **Note**: Replaces URL Search Params Sync
+- **Note**: Replaces URL Search Params Sync. Updated 2026-03-25: simplified to three catch-all routes; moved all param reading into child components; App.tsx reduced to layout shell with Outlet
 
 ### Design System Foundation — The Digital Archive
 

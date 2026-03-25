@@ -1,6 +1,6 @@
 /* HomePage — Virtual-scrolling archive page grouped by year (2026 → 2000) */
 
-import { useSearchParams } from "react-router-dom";
+import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { useRef, useEffect, useCallback } from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { EventCard } from "../components/EventCard";
@@ -10,11 +10,8 @@ import { EventDetailModal } from "../components/EventDetailModal";
 import { FLATTENED_ROWS, YEAR_HEADER_INDICES } from "../data/dummyEvents";
 import type { VirtualRow } from "../data/dummyEvents";
 
-interface HomePageProps {
-  activeYear: number;
-  yearSource: "timeline" | "scroll";
-  onYearChange: (year: number) => void;
-}
+const DEFAULT_YEAR = 2026;
+const DEFAULT_CATEGORY = "all";
 
 /* Row height estimates for the virtualizer */
 function estimateRowSize(index: number): number {
@@ -30,13 +27,32 @@ function estimateRowSize(index: number): number {
   }
 }
 
-export function HomePage({
-  activeYear,
-  yearSource,
-  onYearChange,
-}: HomePageProps) {
+export function HomePage() {
+  const { year: yearParam, category: categoryParam } = useParams();
+  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
+
+  const activeYear = Number(yearParam) || DEFAULT_YEAR;
+  const category = categoryParam || DEFAULT_CATEGORY;
   const activeEventId = searchParams.get("event");
+
+  /** Track whether last year change came from page scroll */
+  const scrollCausedNav = useRef(false);
+  const scrollNavTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
+
+  /** Called by scroll detection — debounced, replaces URL silently */
+  const onScrollYearChange = useCallback(
+    (year: number) => {
+      clearTimeout(scrollNavTimer.current);
+      scrollNavTimer.current = setTimeout(() => {
+        scrollCausedNav.current = true;
+        navigate(`/${year}/${category}${window.location.search}`, {
+          replace: true,
+        });
+      }, 120);
+    },
+    [navigate, category],
+  );
 
   const openEvent = (id: string) =>
     setSearchParams((prev) => {
@@ -74,11 +90,13 @@ export function HomePage({
     if (targetIdx === undefined) return;
     isProgrammaticScroll.current = true;
     lastReportedYear.current = activeYear;
-    virtualizer.scrollToIndex(targetIdx, { align: "start" });
     const timer = setTimeout(() => {
+      virtualizer.scrollToIndex(targetIdx, { align: "start" });
       isProgrammaticScroll.current = false;
     }, 200);
-    return () => clearTimeout(timer);
+    // return () => {
+    //   clearTimeout(timer);
+    // };
   }, [activeYear, virtualizer]);
 
   const detectVisibleYear = useCallback(() => {
@@ -105,9 +123,9 @@ export function HomePage({
 
     if (currentYear !== lastReportedYear.current) {
       lastReportedYear.current = currentYear;
-      onYearChange(currentYear);
+      onScrollYearChange(currentYear);
     }
-  }, [virtualizer, onYearChange]);
+  }, [virtualizer, onScrollYearChange]);
 
   /* Debounced scroll → year detection */
   const onScroll = useCallback(() => {
@@ -116,9 +134,18 @@ export function HomePage({
     scrollTimeoutRef.current = setTimeout(detectVisibleYear, 60);
   }, [detectVisibleYear]);
 
-  /* ── Scroll-to-year when timeline sidebar is clicked ── */
+  /* ── Scroll-to-year when route changes from timeline click ── */
+  const prevYearRef = useRef(activeYear);
   useEffect(() => {
-    if (yearSource !== "timeline") return;
+    if (activeYear === prevYearRef.current) return;
+    prevYearRef.current = activeYear;
+
+    // If the scroll handler caused this navigation, skip scroll-to
+    if (scrollCausedNav.current) {
+      scrollCausedNav.current = false;
+      return;
+    }
+
     const targetIdx = YEAR_HEADER_INDICES.get(activeYear);
     if (targetIdx === undefined) return;
     isProgrammaticScroll.current = true;
@@ -127,12 +154,11 @@ export function HomePage({
       align: "start",
       behavior: "smooth",
     });
-    // Release lock after animation settles
     const timer = setTimeout(() => {
       isProgrammaticScroll.current = false;
     }, 800);
     return () => clearTimeout(timer);
-  }, [activeYear, yearSource, virtualizer]);
+  }, [activeYear, virtualizer]);
 
   /* ── Render a single virtual row ── */
   const renderRow = (row: VirtualRow, index: number) => {
