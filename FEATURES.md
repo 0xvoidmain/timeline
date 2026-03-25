@@ -128,9 +128,10 @@ Tracking all features for the Timeline world event app. Updated after each featu
 ### Search Input
 
 - **Description**: Rounded search field with icon for the top navigation bar
-- **Status**: Implemented
-- **Key Files**: `src/components/SearchInput.tsx`
+- **Status**: Temporarily Disabled
+- **Key Files**: `src/components/Navbar.tsx`, `src/pages/HomePage.tsx`
 - **Date**: 2026-03-25
+- **Note**: Temporarily hidden — SearchInput removed from Navbar JSX and search event listeners removed from HomePage. Component file `src/components/SearchInput.tsx` kept intact for future re-enablement
 
 ### Shared Types Architecture
 
@@ -306,6 +307,14 @@ Tracking all features for the Timeline world event app. Updated after each featu
 - **Key Files**: `src/components/EventDetailModal.tsx`, `src/services/api.ts`
 - **Date**: 2026-03-25
 - **Note**: Replaces dummy data import from dummyEventDetails.ts
+
+### Multi-Year Infinite Scroll
+
+- **Description**: HomePage loads events spanning a 5-year window (center year ± 2) on initial load using `from`/`to` date range params instead of a single `year` filter; scrolling down extends the window backwards by 2 years at a time with sentinel-based IntersectionObserver (600px rootMargin) for seamless pre-fetching; events grouped by year with section headers
+- **Status**: Implemented
+- **Key Files**: `src/pages/HomePage.tsx`
+- **Date**: 2026-03-25
+- **Note**: Replaces the previous single-year pagination approach
 
 ---
 

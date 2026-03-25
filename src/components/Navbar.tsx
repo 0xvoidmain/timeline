@@ -1,10 +1,9 @@
-/* Navbar — Fixed top navigation bar with logo, dynamic categories, search, auth, and contribute CTA */
+/* Navbar — Fixed top navigation bar with logo, dynamic categories, auth, and contribute CTA */
 
 import { useParams, useNavigate } from "react-router-dom";
 import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "../context/AuthContext";
 import { api } from "../services/api";
-import { SearchInput } from "./SearchInput";
 import type { Category } from "../types";
 
 const DEFAULT_YEAR = 2026;
@@ -32,10 +31,6 @@ export function Navbar() {
     },
     [navigate, activeYear],
   );
-
-  const handleSearch = useCallback((query: string) => {
-    window.dispatchEvent(new CustomEvent("timeline:search", { detail: query }));
-  }, []);
 
   const handleContribute = useCallback(() => {
     window.dispatchEvent(new CustomEvent("timeline:contribute"));
@@ -77,10 +72,8 @@ export function Navbar() {
         ))}
       </nav>
 
-      {/* Search + Auth + CTA */}
+      {/* Auth + CTA */}
       <div className="flex items-center gap-4">
-        <SearchInput onSearch={handleSearch} />
-
         {/* Auth */}
         {user ? (
           <div className="flex items-center gap-3">

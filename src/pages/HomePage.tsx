@@ -1,4 +1,4 @@
-/* HomePage — Archive page that loads events from the API, grouped by year */
+/* HomePage — Archive page with multi-year infinite scroll, events grouped by year */
 
 import { useParams, useNavigate } from "react-router-dom";
 import { useState, useEffect, useCallback, useRef } from "react";
@@ -13,6 +13,16 @@ import type { TimelineEvent, Category } from "../types";
 const DEFAULT_YEAR = 2026;
 const DEFAULT_CATEGORY = "all";
 const PAGE_SIZE = 30;
+const YEAR_WINDOW = 2; // ± years around center for initial load
+const YEAR_EXTEND = 2; // years to extend backwards per scroll batch
+
+/** ISO date-range helpers */
+function yearStart(y: number) {
+  return `${y}-01-01T00:00:00.000Z`;
+}
+function yearEnd(y: number) {
+  return `${y}-12-31T23:59:59.999Z`;
+}
 
 /** Group events by year descending, picking the highest-scored as featured */
 function groupByYear(events: TimelineEvent[]) {
@@ -47,10 +57,15 @@ export function HomePage() {
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(true);
-  const [search, setSearch] = useState("");
   const [showContribute, setShowContribute] = useState(false);
+
+  /* Pagination & range tracking */
   const pageRef = useRef(1);
   const sentinelRef = useRef<HTMLDivElement>(null);
+  const fromYearRef = useRef(activeYear - YEAR_WINDOW);
+  const toYearRef = useRef(activeYear + YEAR_WINDOW);
+  /** true when current from/to range has no more pages — next loadMore extends range */
+  const rangeExhaustedRef = useRef(false);
 
   /* Load categories once */
   useEffect(() => {
@@ -60,16 +75,6 @@ export function HomePage() {
       .catch(() => {});
   }, []);
 
-  /* Listen for search events from Navbar */
-  useEffect(() => {
-    const handler = (e: Event) => {
-      const q = (e as CustomEvent<string>).detail ?? "";
-      setSearch(q);
-    };
-    window.addEventListener("timeline:search", handler);
-    return () => window.removeEventListener("timeline:search", handler);
-  }, []);
-
   /* Listen for contribute events */
   useEffect(() => {
     const handler = () => setShowContribute(true);
@@ -77,56 +82,100 @@ export function HomePage() {
     return () => window.removeEventListener("timeline:contribute", handler);
   }, []);
 
-  /* Fetch events when filters change */
+  /* Build filter object for current range */
+  const buildFilters = useCallback(
+    (page: number, from: number, to: number) => {
+      const filters: Record<string, unknown> = {
+        status: "verified",
+        page,
+        limit: PAGE_SIZE,
+        from: yearStart(from),
+        to: yearEnd(to),
+      };
+      if (categorySlug !== "all") filters.category = categorySlug;
+      return filters as Parameters<typeof api.listEvents>[0];
+    },
+    [categorySlug],
+  );
+
+  /* Initial fetch — loads events for centerYear ± YEAR_WINDOW */
   useEffect(() => {
-    setLoading(true);
+    const from = activeYear - YEAR_WINDOW;
+    const to = activeYear + YEAR_WINDOW;
+    fromYearRef.current = from;
+    toYearRef.current = to;
     pageRef.current = 1;
+    rangeExhaustedRef.current = false;
+    setLoading(true);
     setHasMore(true);
 
-    const filters: Record<string, unknown> = {
-      status: "verified",
-      page: 1,
-      limit: PAGE_SIZE,
-    };
-    if (categorySlug !== "all") filters.category = categorySlug;
-    if (activeYear) filters.year = activeYear;
-    if (search) filters.search = search;
-
     api
-      .listEvents(filters as Parameters<typeof api.listEvents>[0])
+      .listEvents(buildFilters(1, from, to))
       .then((res) => {
         setEvents(res.data);
-        setHasMore(res.data.length >= PAGE_SIZE);
+        if (res.data.length < PAGE_SIZE) {
+          rangeExhaustedRef.current = true;
+        }
+        setHasMore(true); // can still extend range backwards
       })
       .catch(() => setEvents([]))
       .finally(() => setLoading(false));
-  }, [activeYear, categorySlug, search]);
+  }, [activeYear, categorySlug, buildFilters]);
 
-  /* Load more (infinite scroll) */
+  /* Load more — pages within current range, then extends range backwards */
   const loadMore = useCallback(() => {
     if (loadingMore || !hasMore) return;
     setLoadingMore(true);
-    const nextPage = pageRef.current + 1;
 
-    const filters: Record<string, unknown> = {
-      status: "verified",
-      page: nextPage,
-      limit: PAGE_SIZE,
-    };
-    if (categorySlug !== "all") filters.category = categorySlug;
-    if (activeYear) filters.year = activeYear;
-    if (search) filters.search = search;
+    if (!rangeExhaustedRef.current) {
+      /* Still have pages in current range */
+      const nextPage = pageRef.current + 1;
+      api
+        .listEvents(
+          buildFilters(nextPage, fromYearRef.current, toYearRef.current),
+        )
+        .then((res) => {
+          pageRef.current = nextPage;
+          setEvents((prev) => [...prev, ...res.data]);
+          if (res.data.length < PAGE_SIZE) {
+            rangeExhaustedRef.current = true;
+          }
+        })
+        .catch(() => {})
+        .finally(() => setLoadingMore(false));
+    } else {
+      /* Current range exhausted — extend backwards */
+      const oldFrom = fromYearRef.current;
+      const newFrom = oldFrom - YEAR_EXTEND;
+      const newTo = oldFrom - 1;
 
-    api
-      .listEvents(filters as Parameters<typeof api.listEvents>[0])
-      .then((res) => {
-        pageRef.current = nextPage;
-        setEvents((prev) => [...prev, ...res.data]);
-        setHasMore(res.data.length >= PAGE_SIZE);
-      })
-      .catch(() => {})
-      .finally(() => setLoadingMore(false));
-  }, [loadingMore, hasMore, categorySlug, activeYear, search]);
+      if (newTo < 0) {
+        // Reached year 0 — no more history to load
+        setHasMore(false);
+        setLoadingMore(false);
+        return;
+      }
+
+      pageRef.current = 1;
+      rangeExhaustedRef.current = false;
+      fromYearRef.current = newFrom;
+
+      api
+        .listEvents(buildFilters(1, newFrom, newTo))
+        .then((res) => {
+          if (res.data.length === 0) {
+            setHasMore(false);
+          } else {
+            setEvents((prev) => [...prev, ...res.data]);
+            if (res.data.length < PAGE_SIZE) {
+              rangeExhaustedRef.current = true;
+            }
+          }
+        })
+        .catch(() => {})
+        .finally(() => setLoadingMore(false));
+    }
+  }, [loadingMore, hasMore, buildFilters]);
 
   /* Intersection observer for infinite scroll */
   useEffect(() => {
@@ -136,7 +185,7 @@ export function HomePage() {
       ([entry]) => {
         if (entry.isIntersecting) loadMore();
       },
-      { rootMargin: "400px" },
+      { rootMargin: "600px" },
     );
     observer.observe(el);
     return () => observer.disconnect();
@@ -159,26 +208,6 @@ export function HomePage() {
     <>
       <div className="ml-0 md:ml-56 pt-16 h-screen overflow-y-auto scrollbar-line">
         <div className="max-w-7xl mx-auto px-8 pb-12">
-          {/* Search indicator */}
-          {search && (
-            <div className="flex items-center gap-3 mt-8 mb-4">
-              <span className="text-on-surface-variant text-sm">
-                Kết quả cho &quot;{search}&quot;
-              </span>
-              <button
-                onClick={() => {
-                  setSearch("");
-                  window.dispatchEvent(
-                    new CustomEvent("timeline:search-clear"),
-                  );
-                }}
-                className="text-primary text-xs font-label uppercase tracking-widest hover:underline"
-              >
-                Xóa
-              </button>
-            </div>
-          )}
-
           {/* Loading spinner */}
           {loading && (
             <div className="flex justify-center items-center py-40">
