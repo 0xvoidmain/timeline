@@ -310,11 +310,11 @@ Tracking all features for the Timeline world event app. Updated after each featu
 
 ### Multi-Year Infinite Scroll
 
-- **Description**: HomePage loads events spanning a 5-year window (center year ± 2) on initial load using `from`/`to` date range params instead of a single `year` filter; scrolling down extends the window backwards by 2 years at a time with sentinel-based IntersectionObserver (600px rootMargin) for seamless pre-fetching; events grouped by year with section headers
+- **Description**: HomePage loads events spanning a 5-year window (center year ± 2) on initial load using `from`/`to` date range params instead of a single `year` filter; scrolling down extends the window backwards by 2 years at a time with sentinel-based IntersectionObserver (600px rootMargin) for seamless pre-fetching; events grouped by year with section headers; enhanced with scroll-driven route sync (IntersectionObserver on year sections updates route/TimelineNav as user scrolls), smart data caching (navigating to an already-loaded year scrolls to its section; navigating outside the loaded range fetches only the missing segment and merges), and auto-scroll on route load (deep-linking to e.g. `/2019` loads the year window and scrolls to the target section after render)
 - **Status**: Implemented
 - **Key Files**: `src/pages/HomePage.tsx`
 - **Date**: 2026-03-25
-- **Note**: Replaces the previous single-year pagination approach
+- **Note**: Replaces the previous single-year pagination approach. Enhanced 2026-03-25 with route↔scroll bidirectional sync, smart caching, and deep-link scroll support
 
 ---
 

@@ -62,10 +62,21 @@ export function HomePage() {
   /* Pagination & range tracking */
   const pageRef = useRef(1);
   const sentinelRef = useRef<HTMLDivElement>(null);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
   const fromYearRef = useRef(activeYear - YEAR_WINDOW);
   const toYearRef = useRef(activeYear + YEAR_WINDOW);
   /** true when current from/to range has no more pages — next loadMore extends range */
   const rangeExhaustedRef = useRef(false);
+  /** Track the last category to detect category-only changes */
+  const lastCategoryRef = useRef(categorySlug);
+  /** Year section refs for scroll-to and IntersectionObserver */
+  const yearSectionRefs = useRef<Map<number, HTMLElement>>(new Map());
+  /** Suppress route updates while programmatically scrolling */
+  const isProgrammaticScroll = useRef(false);
+  /** Track the year currently visible in the viewport (from scroll) */
+  const visibleYearRef = useRef(activeYear);
+  /** Pending scroll-to year after data loads */
+  const pendingScrollYear = useRef<number | null>(null);
 
   /* Load categories once */
   useEffect(() => {
@@ -98,29 +109,140 @@ export function HomePage() {
     [categorySlug],
   );
 
-  /* Initial fetch — loads events for centerYear ± YEAR_WINDOW */
-  useEffect(() => {
-    const from = activeYear - YEAR_WINDOW;
-    const to = activeYear + YEAR_WINDOW;
-    fromYearRef.current = from;
-    toYearRef.current = to;
-    pageRef.current = 1;
-    rangeExhaustedRef.current = false;
-    setLoading(true);
-    setHasMore(true);
+  /** Scroll to a year section element smoothly, suppressing route updates */
+  const scrollToYear = useCallback((year: number) => {
+    const el = yearSectionRefs.current.get(year);
+    if (!el || !scrollContainerRef.current) return;
+    isProgrammaticScroll.current = true;
+    el.scrollIntoView({ behavior: "smooth", block: "start" });
+    // Release the suppression after scroll settles
+    setTimeout(() => {
+      isProgrammaticScroll.current = false;
+    }, 800);
+  }, []);
 
-    api
-      .listEvents(buildFilters(1, from, to))
-      .then((res) => {
-        setEvents(res.data);
-        if (res.data.length < PAGE_SIZE) {
-          rangeExhaustedRef.current = true;
-        }
-        setHasMore(true); // can still extend range backwards
-      })
-      .catch(() => setEvents([]))
-      .finally(() => setLoading(false));
-  }, [activeYear, categorySlug, buildFilters]);
+  /** Fetch events for a range and replace state */
+  const fetchRange = useCallback(
+    (from: number, to: number, scrollTarget?: number) => {
+      fromYearRef.current = from;
+      toYearRef.current = to;
+      pageRef.current = 1;
+      rangeExhaustedRef.current = false;
+      setLoading(true);
+      setHasMore(true);
+
+      if (scrollTarget !== undefined) {
+        pendingScrollYear.current = scrollTarget;
+      }
+
+      api
+        .listEvents(buildFilters(1, from, to))
+        .then((res) => {
+          setEvents(res.data);
+          if (res.data.length < PAGE_SIZE) {
+            rangeExhaustedRef.current = true;
+          }
+          setHasMore(true); // can still extend range backwards
+        })
+        .catch(() => setEvents([]))
+        .finally(() => setLoading(false));
+    },
+    [buildFilters],
+  );
+
+  /** Expand the loaded range to include a target year without discarding existing events */
+  const expandRangeToInclude = useCallback(
+    (targetYear: number) => {
+      const currentFrom = fromYearRef.current;
+      const currentTo = toYearRef.current;
+
+      // Calculate new boundaries that include target ± YEAR_WINDOW
+      const neededFrom = Math.min(currentFrom, targetYear - YEAR_WINDOW);
+      const neededTo = Math.max(currentTo, targetYear + YEAR_WINDOW);
+
+      // Determine which new range segment to fetch
+      let fetchFrom: number;
+      let fetchTo: number;
+      if (targetYear < currentFrom) {
+        // Need older data
+        fetchFrom = neededFrom;
+        fetchTo = currentFrom - 1;
+      } else {
+        // Need newer data
+        fetchFrom = currentTo + 1;
+        fetchTo = neededTo;
+      }
+
+      fromYearRef.current = neededFrom;
+      toYearRef.current = neededTo;
+      pendingScrollYear.current = targetYear;
+
+      // Fetch just the missing segment and merge
+      setLoadingMore(true);
+      api
+        .listEvents(buildFilters(1, fetchFrom, fetchTo))
+        .then((res) => {
+          if (res.data.length > 0) {
+            setEvents((prev) => [...prev, ...res.data]);
+          }
+        })
+        .catch(() => {})
+        .finally(() => setLoadingMore(false));
+    },
+    [buildFilters],
+  );
+
+  /* React to activeYear / categorySlug changes */
+  useEffect(() => {
+    const categoryChanged = lastCategoryRef.current !== categorySlug;
+    lastCategoryRef.current = categorySlug;
+
+    if (categoryChanged) {
+      // Category changed — must reload from scratch
+      fetchRange(
+        activeYear - YEAR_WINDOW,
+        activeYear + YEAR_WINDOW,
+        activeYear,
+      );
+      return;
+    }
+
+    // Year is already within the loaded range — just scroll to it
+    const inRange =
+      activeYear >= fromYearRef.current && activeYear <= toYearRef.current;
+    if (inRange && events.length > 0 && !loading) {
+      const hasSection = yearSectionRefs.current.has(activeYear);
+      if (hasSection) {
+        scrollToYear(activeYear);
+      }
+      // Even if there's no section for this exact year (no events that year),
+      // no need to refetch — the data is already loaded
+      return;
+    }
+
+    // Year is outside the loaded range — expand or fresh-fetch
+    if (events.length > 0 && !loading) {
+      expandRangeToInclude(activeYear);
+    } else {
+      fetchRange(
+        activeYear - YEAR_WINDOW,
+        activeYear + YEAR_WINDOW,
+        activeYear,
+      );
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeYear, categorySlug]);
+
+  /* After data loads and DOM updates, scroll to pending year */
+  useEffect(() => {
+    if (loading || pendingScrollYear.current === null) return;
+    const target = pendingScrollYear.current;
+    pendingScrollYear.current = null;
+    // Wait for DOM to render the sections
+    requestAnimationFrame(() => {
+      scrollToYear(target);
+    });
+  }, [loading, events, scrollToYear]);
 
   /* Load more — pages within current range, then extends range backwards */
   const loadMore = useCallback(() => {
@@ -150,7 +272,6 @@ export function HomePage() {
       const newTo = oldFrom - 1;
 
       if (newTo < 0) {
-        // Reached year 0 — no more history to load
         setHasMore(false);
         setLoadingMore(false);
         return;
@@ -177,7 +298,7 @@ export function HomePage() {
     }
   }, [loadingMore, hasMore, buildFilters]);
 
-  /* Intersection observer for infinite scroll */
+  /* Intersection observer for infinite scroll (sentinel) */
   useEffect(() => {
     const el = sentinelRef.current;
     if (!el) return;
@@ -191,6 +312,47 @@ export function HomePage() {
     return () => observer.disconnect();
   }, [loadMore]);
 
+  /* IntersectionObserver on year sections — update route as user scrolls */
+  useEffect(() => {
+    const container = scrollContainerRef.current;
+    if (!container || loading) return;
+
+    const sections = yearSectionRefs.current;
+    if (sections.size === 0) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (isProgrammaticScroll.current) return;
+        // Find the topmost intersecting year section
+        let topYear: number | null = null;
+        let topBound = Infinity;
+        for (const entry of entries) {
+          if (entry.isIntersecting) {
+            const year = Number(entry.target.getAttribute("data-year"));
+            if (!isNaN(year) && entry.boundingClientRect.top < topBound) {
+              topBound = entry.boundingClientRect.top;
+              topYear = year;
+            }
+          }
+        }
+        if (topYear !== null && topYear !== visibleYearRef.current) {
+          visibleYearRef.current = topYear;
+          navigate(`/${topYear}/${categorySlug}`, { replace: true });
+        }
+      },
+      {
+        root: container,
+        rootMargin: "-10% 0px -70% 0px",
+        threshold: 0,
+      },
+    );
+
+    for (const el of sections.values()) {
+      observer.observe(el);
+    }
+    return () => observer.disconnect();
+  }, [loading, events, categorySlug, navigate]);
+
   /* Category name helper */
   const getCategoryName = (slug: string) =>
     categories.find((c) => c.slug === slug)?.name ?? slug;
@@ -202,11 +364,26 @@ export function HomePage() {
   };
   const closeEvent = () => navigate(`/${activeYear}/${categorySlug}`);
 
+  /** Register a year section ref */
+  const setYearRef = useCallback(
+    (year: number) => (el: HTMLElement | null) => {
+      if (el) {
+        yearSectionRefs.current.set(year, el);
+      } else {
+        yearSectionRefs.current.delete(year);
+      }
+    },
+    [],
+  );
+
   const groups = groupByYear(events);
 
   return (
     <>
-      <div className="ml-0 md:ml-56 pt-16 h-screen overflow-y-auto scrollbar-line">
+      <div
+        ref={scrollContainerRef}
+        className="ml-0 md:ml-56 pt-16 h-screen overflow-y-auto scrollbar-line"
+      >
         <div className="max-w-7xl mx-auto px-8 pb-12">
           {/* Loading spinner */}
           {loading && (
@@ -230,7 +407,11 @@ export function HomePage() {
           {/* Event groups by year */}
           {!loading &&
             groups.map((group, gi) => (
-              <section key={group.year}>
+              <section
+                key={group.year}
+                ref={setYearRef(group.year)}
+                data-year={group.year}
+              >
                 {/* Year header */}
                 <header className={`${gi > 0 ? "mt-40" : "mt-12"} pt-20 pb-8`}>
                   {gi > 0 && (
