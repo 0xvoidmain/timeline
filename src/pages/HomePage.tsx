@@ -77,6 +77,8 @@ export function HomePage() {
   const visibleYearRef = useRef(activeYear);
   /** Pending scroll-to year after data loads */
   const pendingScrollYear = useRef<number | null>(null);
+  /** True when the route change was caused by scrolling (not TimelineNav) */
+  const scrollDrivenNav = useRef(false);
 
   /* Load categories once */
   useEffect(() => {
@@ -207,18 +209,23 @@ export function HomePage() {
       return;
     }
 
-    // Year is already within the loaded range — just scroll to it
+    // Year is already within the loaded range
     const inRange =
       activeYear >= fromYearRef.current && activeYear <= toYearRef.current;
     if (inRange && events.length > 0 && !loading) {
+      // If this route change came from scrolling, don't scroll back — user is already there
+      if (scrollDrivenNav.current) {
+        scrollDrivenNav.current = false;
+        return;
+      }
       const hasSection = yearSectionRefs.current.has(activeYear);
       if (hasSection) {
         scrollToYear(activeYear);
       }
-      // Even if there's no section for this exact year (no events that year),
-      // no need to refetch — the data is already loaded
       return;
     }
+    // Reset flag for out-of-range navigation
+    scrollDrivenNav.current = false;
 
     // Year is outside the loaded range — expand or fresh-fetch
     if (events.length > 0 && !loading) {
@@ -337,6 +344,7 @@ export function HomePage() {
         }
         if (topYear !== null && topYear !== visibleYearRef.current) {
           visibleYearRef.current = topYear;
+          scrollDrivenNav.current = true;
           navigate(`/${topYear}/${categorySlug}`, { replace: true });
         }
       },
